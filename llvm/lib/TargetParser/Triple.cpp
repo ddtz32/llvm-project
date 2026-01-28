@@ -67,6 +67,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
     return "riscv32be";
   case riscv64be:
     return "riscv64be";
+  case toy32:          return "toy32";
+  case toy64:          return "toy64";
   case shave:          return "shave";
   case sparc:          return "sparc";
   case sparcel:        return "sparcel";
@@ -249,6 +251,10 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case riscv32be:
   case riscv64be:
     return "riscv";
+
+  case toy32:
+  case toy64:
+    return "toy";
 
   case ve:          return "ve";
   case csky:        return "csky";
@@ -480,6 +486,8 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
       .Case("riscv64", riscv64)
       .Case("riscv32be", riscv32be)
       .Case("riscv64be", riscv64be)
+      .Case("toy32", toy32)
+      .Case("toy64", toy64)
       .Case("hexagon", hexagon)
       .Case("sparc", sparc)
       .Case("sparcel", sparcel)
@@ -631,6 +639,8 @@ static Triple::ArchType parseArch(StringRef ArchName) {
           .Case("riscv64", Triple::riscv64)
           .Case("riscv32be", Triple::riscv32be)
           .Case("riscv64be", Triple::riscv64be)
+          .Case("toy32", Triple::toy32)
+          .Case("toy64", Triple::toy64)
           .Case("hexagon", Triple::hexagon)
           .Cases({"s390x", "systemz"}, Triple::systemz)
           .Case("sparc", Triple::sparc)
@@ -1016,6 +1026,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::riscv64:
   case Triple::riscv32be:
   case Triple::riscv64be:
+  case Triple::toy32:
+  case Triple::toy64:
   case Triple::shave:
   case Triple::sparc:
   case Triple::sparcel:
@@ -1741,6 +1753,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::renderscript32:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv32be:
+  case llvm::Triple::toy32:
   case llvm::Triple::shave:
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
@@ -1772,6 +1785,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::renderscript64:
   case llvm::Triple::riscv64:
   case llvm::Triple::riscv64be:
+  case llvm::Triple::toy64:
   case llvm::Triple::sparcv9:
   case llvm::Triple::spirv:
   case llvm::Triple::spir64:
@@ -1851,6 +1865,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::renderscript32:
   case Triple::riscv32:
   case Triple::riscv32be:
+  case Triple::toy32:
   case Triple::shave:
   case Triple::sparc:
   case Triple::sparcel:
@@ -1886,6 +1901,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::riscv64be:
     T.setArch(Triple::riscv32be);
     break;
+  case Triple::toy64:          T.setArch(Triple::toy32);   break;
   case Triple::sparcv9:        T.setArch(Triple::sparc);   break;
   case Triple::spir64:         T.setArch(Triple::spir);    break;
   case Triple::spirv:
@@ -1937,6 +1953,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::renderscript64:
   case Triple::riscv64:
   case Triple::riscv64be:
+  case Triple::toy64:
   case Triple::sparcv9:
   case Triple::spir64:
   case Triple::spirv64:
@@ -1967,6 +1984,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::riscv32be:
     T.setArch(Triple::riscv64be);
     break;
+  case Triple::toy32:           T.setArch(Triple::toy64);      break;
   case Triple::sparc:           T.setArch(Triple::sparcv9);    break;
   case Triple::spir:            T.setArch(Triple::spir64);     break;
   case Triple::spirv:
@@ -2024,6 +2042,8 @@ Triple Triple::getBigEndianArchVariant() const {
   // drop any arch suffixes.
   case Triple::arm:
   case Triple::thumb:
+  case Triple::toy32:
+  case Triple::toy64:
     T.setArch(UnknownArch);
     break;
 
@@ -2124,6 +2144,8 @@ bool Triple::isLittleEndian() const {
   case Triple::renderscript64:
   case Triple::riscv32:
   case Triple::riscv64:
+  case Triple::toy32:
+  case Triple::toy64:
   case Triple::shave:
   case Triple::sparcel:
   case Triple::spir64:
@@ -2350,7 +2372,7 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   }
 
   if (isAArch64() || isX86() || isPPC() || isMIPS() || isSPARC() || isBPF() ||
-      isRISCV() || isLoongArch())
+      isRISCV() || isToy() || isLoongArch())
     return ExceptionHandling::DwarfCFI;
 
   switch (getArch()) {

@@ -27,7 +27,7 @@
 /*/CMakeUserPresets.json
 
 # Nested build directory
-/build*
+/build*/
 
 #==============================================================================#
 # Explicit files to ignore (only matches one).
@@ -68,7 +68,7 @@ AGENTS.md
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
 #==============================================================================#
 # VS2017 and VSCode config files.
-.vscode
+# .vscode
 .vs
 #zed config files
 .zed

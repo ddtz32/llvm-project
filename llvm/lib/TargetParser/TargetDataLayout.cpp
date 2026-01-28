@@ -318,6 +318,13 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
   return Ret;
 }
 
+static std::string computeToyDataLayout(const Triple &T) {
+  std::string ret;
+
+  // TODO
+  return ret;
+}
+
 static std::string computeSparcDataLayout(const Triple &T) {
   const bool Is64Bit = T.isSPARC64();
 
@@ -594,6 +601,9 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::riscv32be:
   case Triple::riscv64be:
     return computeRISCVDataLayout(*this, ABIName);
+  case Triple::toy32:
+  case Triple::toy64:
+    return computeToyDataLayout(*this);
   case Triple::sparc:
   case Triple::sparcv9:
   case Triple::sparcel:
