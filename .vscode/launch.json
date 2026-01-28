@@ -21,7 +21,8 @@
       "cwd": "${fileDirname}",
       "environment": [],
       "externalConsole": false,
-      "MIMode": "gdb",
+      // "MIMode": "gdb",
+      "MIMode": "lldb",
       "setupCommands": [
         {
           "description": "Enable pretty-printing for gdb",
@@ -35,7 +36,8 @@
         },
         {
           "description": "Load llvm pretty printer file",
-          "text": "source ${workspaceFolder}/llvm/utils/gdb-scripts/prettyprinters.py",
+          // "text": "source ${workspaceFolder}/llvm/utils/gdb-scripts/prettyprinters.py",
+          "text": "command script import ${workspaceFolder}/llvm/utils/lldbDataFormatters.py",
         }
       ]
     }
