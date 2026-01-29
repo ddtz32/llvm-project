@@ -18,7 +18,7 @@ ToyTargetMachine::ToyTargetMachine(const Target &T, const Triple &TT,
           T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT, CPU, FS,
           Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small), OL) {
-  // TODO
+  initAsmInfo();
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeToyTarget() {
