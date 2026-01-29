@@ -1,10 +1,11 @@
-#include "ToyTargetDesc.h"
+#include "ToyMCTargetDesc.h"
 #include "TargetInfo/ToyTargetInfo.h"
+#include "ToyInstPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 
 #define GET_REGINFO_MC_DESC
 #include "ToyGenRegisterInfo.inc"
@@ -34,14 +35,24 @@ static MCSubtargetInfo *createToyMCSubtargetInfo(const Triple &TT,
   if (CPU.empty() || CPU == "generic")
     CPU = TT.isArch64Bit() ? "generic-toy64" : "generic-toy32";
 
-  MCSubtargetInfo *X = createToyMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+  MCSubtargetInfo *X =
+      createToyMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
   return X;
 }
+
 static MCAsmInfo *createToyMCAsmInfo(const MCRegisterInfo &MRI,
                                      const Triple &TT,
                                      const MCTargetOptions &Options) {
   MCAsmInfo *MAI = new MCAsmInfo();
   return MAI;
+}
+
+static MCInstPrinter *createToyMCInstPrinter(const Triple &T,
+                                             unsigned SyntaxVariant,
+                                             const MCAsmInfo &MAI,
+                                             const MCInstrInfo &MII,
+                                             const MCRegisterInfo &MRI) {
+  return new ToyInstPrinter(MAI, MII, MRI);
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeToyTargetMC() {
@@ -50,5 +61,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeToyTargetMC() {
     TargetRegistry::RegisterMCInstrInfo(*T, createToyMCInstrInfo);
     TargetRegistry::RegisterMCSubtargetInfo(*T, createToyMCSubtargetInfo);
     TargetRegistry::RegisterMCAsmInfo(*T, createToyMCAsmInfo);
+    TargetRegistry::RegisterMCInstPrinter(*T, createToyMCInstPrinter);
   }
 }

@@ -1,5 +1,6 @@
 {
   "tablegen-lsp.includePath": [
     "/home/suoer/workspace/llvm-project/llvm/include",
+    "/Users/suoer/Workspace/llvm-project/llvm/include",
   ],
 }

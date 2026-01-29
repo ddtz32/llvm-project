@@ -5,6 +5,7 @@ set(LLVM_TARGET_DEFINITIONS Toy.td)
 tablegen(LLVM ToyGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ToyGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM ToyGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM ToyGenAsmWriter.inc -gen-asm-writer)
 
 add_public_tablegen_target(ToyCommonTableGen)
 
