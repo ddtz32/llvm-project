@@ -1,10 +1,12 @@
+#include "MCTargetDesc/ToyInstPrinter.h"
 #include "MCTargetDesc/ToyMCTargetDesc.h"
 #include "TargetInfo/ToyTargetInfo.h"
-#include "llvm/MC/MCAsmMacro.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -32,6 +34,7 @@ public:
                                bool MatchingInlineAsm) override;
 
   bool parseOperand(OperandVector &Operands);
+  ParseStatus parseExpression(OperandVector &Operands);
   ParseStatus parseRegister(OperandVector &Operands);
 
 #define GET_ASSEMBLER_HEADER
@@ -43,13 +46,13 @@ struct ToyOperand final : public MCParsedAsmOperand {
 
   enum class KindTy {
     Token,
-    Immediate,
+    Expression,
     Register,
   } Kind;
 
   union {
     StringRef Tok;
-    int Imm;
+    const MCExpr *Expr;
     MCRegister Reg;
   };
 
@@ -58,23 +61,31 @@ struct ToyOperand final : public MCParsedAsmOperand {
   explicit ToyOperand(KindTy Kind) : MCParsedAsmOperand(), Kind(Kind) {}
 
   bool isToken() const override { return Kind == KindTy::Token; }
-  bool isImm() const override { return Kind == KindTy::Immediate; }
+  bool isImm() const override {
+    return isExpr() && dyn_cast<MCConstantExpr>(getExpr());
+  }
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isMem() const override { llvm_unreachable("TODO"); }
+  bool isExpr() const { return Kind == KindTy::Expression; }
 
   StringRef getToken() const {
     assert(isToken() && "Invalid type access!");
     return Tok;
   }
 
-  int getImm() const {
+  int64_t getImm() const {
     assert(isImm() && "Invalid type access!");
-    return Imm;
+    return dyn_cast<MCConstantExpr>(getExpr())->getValue();
   }
 
   MCRegister getReg() const override {
     assert(isReg() && "Invalid type access!");
     return Reg;
+  }
+
+  const MCExpr *getExpr() const {
+    assert(isExpr() && "Invalid type access!");
+    return Expr;
   }
 
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -85,12 +96,16 @@ struct ToyOperand final : public MCParsedAsmOperand {
     case KindTy::Token:
       OS << "'" << getToken() << "'";
       break;
-    case KindTy::Immediate:
-      OS << "imm: " << getImm();
+    case KindTy::Expression:
+      assert(isImm() && "TODO");
+      OS << "<imm: ";
+      MAI.printExpr(OS, *getExpr());
+      OS << ">";
       break;
     case KindTy::Register:
       // TODO
-      OS << "reg: " << getReg();
+      OS << "<reg: " << (Reg ? ToyInstPrinter::getRegisterName(Reg) : "noreg")
+         << " (" << Reg.id() << ")>";
       break;
     }
   }
@@ -101,10 +116,18 @@ struct ToyOperand final : public MCParsedAsmOperand {
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
 
-  static std::unique_ptr<ToyOperand> createToken(StringRef Tok, SMLoc S,
-                                                 SMLoc E) {
+  static std::unique_ptr<ToyOperand> createToken(StringRef Tok, SMLoc Loc) {
     auto Op = std::make_unique<ToyOperand>(KindTy::Token);
     Op->Tok = Tok;
+    Op->StartLoc = Loc;
+    Op->EndLoc = Loc;
+    return Op;
+  }
+
+  static std::unique_ptr<ToyOperand> createExpr(const MCExpr *Expr, SMLoc S,
+                                                SMLoc E) {
+    auto Op = std::make_unique<ToyOperand>(KindTy::Expression);
+    Op->Expr = Expr;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -146,7 +169,7 @@ ParseStatus ToyAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
 bool ToyAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                     SMLoc NameLoc, OperandVector &Operands) {
   // first operand is the opcode string of instruction
-  Operands.push_back(ToyOperand::createToken(Name, NameLoc, getEndLoc()));
+  Operands.push_back(ToyOperand::createToken(Name, NameLoc));
 
   // if this instruciton has no operand, then finish
   if (getLexer().is(AsmToken::EndOfStatement)) {
@@ -179,7 +202,28 @@ bool ToyAsmParser::parseOperand(OperandVector &Operands) {
   if (parseRegister(Operands).isSuccess())
     return false;
 
+  // parse expression, now this is an immedidate
+  if (parseExpression(Operands).isSuccess())
+    return false;
+
   return true;
+}
+
+ParseStatus ToyAsmParser::parseExpression(OperandVector &Operands) {
+  SMLoc S = getLoc(), E;
+  const MCExpr *Expr;
+
+  switch (getLexer().getTok().getKind()) {
+  default:
+    return ParseStatus::NoMatch;
+  case AsmToken::Integer:
+    if (getParser().parseExpression(Expr, E))
+      return ParseStatus::Failure;
+    break;
+  }
+
+  Operands.push_back(ToyOperand::createExpr(Expr, S, E));
+  return ParseStatus::Success;
 }
 
 ParseStatus ToyAsmParser::parseRegister(OperandVector &Operands) {
@@ -197,6 +241,7 @@ ParseStatus ToyAsmParser::parseRegister(OperandVector &Operands) {
     return ParseStatus::NoMatch;
 
   Operands.push_back(ToyOperand::createReg(Reg, getLoc(), getEndLoc()));
+  getLexer().Lex(); // eat register
   return ParseStatus::Success;
 }
 
