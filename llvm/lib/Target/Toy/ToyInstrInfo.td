@@ -10,4 +10,4 @@ class ToyFormatR<string opcodestr>
               "$rd, $rs1, $rs2">;
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
-  def : ToyFormatR<"test">;
+  def XXX : ToyFormatR<"test">;

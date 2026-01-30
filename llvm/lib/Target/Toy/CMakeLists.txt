@@ -6,6 +6,7 @@ tablegen(LLVM ToyGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ToyGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM ToyGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM ToyGenAsmWriter.inc -gen-asm-writer)
+tablegen(LLVM ToyGenAsmMatcher.inc -gen-asm-matcher)
 
 add_public_tablegen_target(ToyCommonTableGen)
 
@@ -24,5 +25,6 @@ add_llvm_target(ToyCodeGen
   Toy
   )
 
+add_subdirectory(AsmParser)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
