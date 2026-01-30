@@ -1,4 +1,5 @@
 #include "ToyInstPrinter.h"
+#include "ToyMCTargetDesc.h"
 #include "llvm/MC/MCInst.h"
 
 using namespace llvm;
@@ -20,7 +21,11 @@ bool ToyInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
 
 void ToyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                StringRef Annot, const MCSubtargetInfo &STI,
-                               raw_ostream &OS) {}
+                               raw_ostream &OS) {
+  llvm_unreachable("TODO");
+}
 
 void ToyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                  raw_ostream &O) {}
+                                  raw_ostream &O) {
+  llvm_unreachable("TODO");
+}

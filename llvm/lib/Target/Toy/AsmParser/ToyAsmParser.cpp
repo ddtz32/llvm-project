@@ -1,8 +1,10 @@
 #include "MCTargetDesc/ToyMCTargetDesc.h"
 #include "TargetInfo/ToyTargetInfo.h"
+#include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -58,7 +60,7 @@ struct ToyOperand final : public MCParsedAsmOperand {
   bool isToken() const override { return Kind == KindTy::Token; }
   bool isImm() const override { return Kind == KindTy::Immediate; }
   bool isReg() const override { return Kind == KindTy::Register; }
-  bool isMem() const override { return false; }
+  bool isMem() const override { llvm_unreachable("TODO"); }
 
   StringRef getToken() const {
     assert(isToken() && "Invalid type access!");
@@ -181,10 +183,21 @@ bool ToyAsmParser::parseOperand(OperandVector &Operands) {
 }
 
 ParseStatus ToyAsmParser::parseRegister(OperandVector &Operands) {
-  StringRef Name = getLexer().getTok().getIdentifier();
+  const AsmToken &Token = getLexer().getTok();
+  if (Token.isNot(AsmToken::Identifier))
+    return ParseStatus::NoMatch;
+
+  StringRef Name = Token.getIdentifier();
   MCRegister Reg = MatchRegisterName(Name);
+  if (!Reg)
+    // riscv registers also have an ABI name
+    Reg = MatchRegisterAltName(Name);
+
+  if (!Reg)
+    return ParseStatus::NoMatch;
+
   Operands.push_back(ToyOperand::createReg(Reg, getLoc(), getEndLoc()));
-  return Reg ? ParseStatus::Success : ParseStatus::NoMatch;
+  return ParseStatus::Success;
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeToyAsmParser() {

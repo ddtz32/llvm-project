@@ -16,6 +16,7 @@
         "-M",
         "no-aliases",
         "-show-encoding",
+        "-show-inst-operands",
       ],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
