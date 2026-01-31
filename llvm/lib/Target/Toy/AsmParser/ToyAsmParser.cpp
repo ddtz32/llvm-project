@@ -110,10 +110,16 @@ struct ToyOperand final : public MCParsedAsmOperand {
     }
   }
 
+  // convert asm parsed operands to MCInst
   // used by tablgen in ToyGenAsmMatcher.inc
   void addRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(getReg()));
+  }
+
+  void addImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getImm()));
   }
 
   static std::unique_ptr<ToyOperand> createToken(StringRef Tok, SMLoc Loc) {
