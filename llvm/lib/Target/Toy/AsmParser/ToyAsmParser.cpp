@@ -5,6 +5,8 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 
@@ -20,6 +22,7 @@ public:
   // utility fucntions
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
   SMLoc getEndLoc() const { return getParser().getTok().getEndLoc(); }
+  bool isToy64() const { return getSTI().hasFeature(Toy::Feature64Bit); }
 
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
@@ -50,9 +53,14 @@ struct ToyOperand final : public MCParsedAsmOperand {
     Register,
   } Kind;
 
+  struct ExprOp {
+    const MCExpr *Expr;
+    bool IsToy64;
+  };
+
   union {
     StringRef Tok;
-    const MCExpr *Expr;
+    ExprOp Expr;
     MCRegister Reg;
   };
 
@@ -67,6 +75,7 @@ struct ToyOperand final : public MCParsedAsmOperand {
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isMem() const override { llvm_unreachable("TODO"); }
   bool isExpr() const { return Kind == KindTy::Expression; }
+  bool isToy64Expr() const { return isExpr() && Expr.IsToy64; }
 
   StringRef getToken() const {
     assert(isToken() && "Invalid type access!");
@@ -75,7 +84,11 @@ struct ToyOperand final : public MCParsedAsmOperand {
 
   int64_t getImm() const {
     assert(isImm() && "Invalid type access!");
-    return dyn_cast<MCConstantExpr>(getExpr())->getValue();
+    int64_t Imm = dyn_cast<MCConstantExpr>(getExpr())->getValue();
+    if (isToy64Expr())
+      return Imm;
+    assert(isUInt<32>(Imm));
+    return SignExtend64<32>(Imm);
   }
 
   MCRegister getReg() const override {
@@ -85,7 +98,7 @@ struct ToyOperand final : public MCParsedAsmOperand {
 
   const MCExpr *getExpr() const {
     assert(isExpr() && "Invalid type access!");
-    return Expr;
+    return Expr.Expr;
   }
 
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -130,10 +143,11 @@ struct ToyOperand final : public MCParsedAsmOperand {
     return Op;
   }
 
-  static std::unique_ptr<ToyOperand> createExpr(const MCExpr *Expr, SMLoc S,
+  static std::unique_ptr<ToyOperand> createExpr(const MCExpr *Expr, bool IsToy64, SMLoc S,
                                                 SMLoc E) {
     auto Op = std::make_unique<ToyOperand>(KindTy::Expression);
-    Op->Expr = Expr;
+    Op->Expr.Expr = Expr;
+    Op->Expr.IsToy64 = IsToy64;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -200,7 +214,17 @@ bool ToyAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
                                            MCStreamer &Out, uint64_t &ErrorInfo,
                                            bool MatchingInlineAsm) {
-  llvm_unreachable("TODO");
+  MCInst Inst;
+  FeatureBitset MissingFeatures;
+  auto Result = MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
+                                     MatchingInlineAsm);
+  switch (Result) {
+  default:
+    llvm_unreachable("TODO");
+  case Match_Success:
+    Out.emitInstruction(Inst, getSTI());
+    return false;
+  }
 }
 
 bool ToyAsmParser::parseOperand(OperandVector &Operands) {
@@ -228,7 +252,7 @@ ParseStatus ToyAsmParser::parseExpression(OperandVector &Operands) {
     break;
   }
 
-  Operands.push_back(ToyOperand::createExpr(Expr, S, E));
+  Operands.push_back(ToyOperand::createExpr(Expr, isToy64(), S, E));
   return ParseStatus::Success;
 }
 

@@ -46,10 +46,24 @@ const char *ToyInstPrinter::getRegisterName(MCRegister Reg) {
 void ToyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                StringRef Annot, const MCSubtargetInfo &STI,
                                raw_ostream &OS) {
-  llvm_unreachable("TODO");
+  printInstruction(MI, Address, OS);
+  printAnnotation(OS, Annot);
 }
 
 void ToyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                  raw_ostream &O) {
+                                  raw_ostream &OS) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+  if (MO.isReg())
+    return printRegName(OS, MO.getReg());
+
+  if (MO.isImm()) {
+    markup(OS, Markup::Immediate) << formatImm(MO.getImm());
+    return;
+  }
+
   llvm_unreachable("TODO");
+}
+
+void ToyInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
+  markup(OS, Markup::Register) << getRegisterName(Reg);
 }
