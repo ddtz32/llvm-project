@@ -62,5 +62,6 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeToyTargetMC() {
     TargetRegistry::RegisterMCSubtargetInfo(*T, createToyMCSubtargetInfo);
     TargetRegistry::RegisterMCAsmInfo(*T, createToyMCAsmInfo);
     TargetRegistry::RegisterMCInstPrinter(*T, createToyMCInstPrinter);
+    TargetRegistry::RegisterMCCodeEmitter(*T, createToyMCCodeEmitter);
   }
 }

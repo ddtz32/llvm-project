@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMToyDesc
   ToyInstPrinter.cpp
+  ToyMCCodeEmitter.cpp
   ToyMCTargetDesc.cpp
 
   LINK_COMPONENTS

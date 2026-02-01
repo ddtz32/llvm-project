@@ -75,7 +75,6 @@ struct ToyOperand final : public MCParsedAsmOperand {
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isMem() const override { llvm_unreachable("TODO"); }
   bool isExpr() const { return Kind == KindTy::Expression; }
-  bool isToy64Expr() const { return isExpr() && Expr.IsToy64; }
 
   StringRef getToken() const {
     assert(isToken() && "Invalid type access!");
@@ -85,7 +84,7 @@ struct ToyOperand final : public MCParsedAsmOperand {
   int64_t getImm() const {
     assert(isImm() && "Invalid type access!");
     int64_t Imm = dyn_cast<MCConstantExpr>(getExpr())->getValue();
-    if (isToy64Expr())
+    if (getExprToy64())
       return Imm;
     assert(isUInt<32>(Imm));
     return SignExtend64<32>(Imm);
@@ -101,6 +100,11 @@ struct ToyOperand final : public MCParsedAsmOperand {
     return Expr.Expr;
   }
 
+  bool getExprToy64() const {
+    assert(isExpr() && "Invalid type access!");
+    return Expr.IsToy64;
+  }
+
   SMLoc getStartLoc() const override { return StartLoc; }
   SMLoc getEndLoc() const override { return EndLoc; }
 
@@ -113,7 +117,7 @@ struct ToyOperand final : public MCParsedAsmOperand {
       assert(isImm() && "TODO");
       OS << "<imm: ";
       MAI.printExpr(OS, *getExpr());
-      OS << ">";
+      OS << ' ' << (getExprToy64() ? "toy64" : "toy32") << '>';
       break;
     case KindTy::Register:
       // TODO

@@ -41,6 +41,8 @@ class ToyInst<dag outs, dag ins, bits<7> opcode, string opcodestr,
   let OutOperandList = outs;
   let InOperandList = ins;
   let AsmString = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
+
+  let Size = 4;
 }
 
 class ToyFormatR<bits<7> opcode, bits<3> funct3, bits<7> funct7, string opcodestr>

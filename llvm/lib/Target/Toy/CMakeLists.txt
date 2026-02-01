@@ -7,6 +7,7 @@ tablegen(LLVM ToyGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM ToyGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM ToyGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM ToyGenAsmMatcher.inc -gen-asm-matcher)
+tablegen(LLVM ToyGenMCCodeEmitter.inc -gen-emitter)
 
 add_public_tablegen_target(ToyCommonTableGen)
 
