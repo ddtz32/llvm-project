@@ -70,9 +70,10 @@ class ToyFormatIBase<dag outs, dag ins, bits<7> opcode, bits<3> funct3,
   let Inst{19-15} = rs1;
 }
 
-class ToyFormatI<bits<7> opcode, bits<3> funct3, string opcodestr>
+class ToyFormatI<bits<7> opcode, bits<3> funct3, string opcodestr,
+                 string argstr = "$rd, $rs1, $imm">
     : ToyFormatIBase<(outs GPR:$rd), (ins GPR:$rs1, simm12:$imm), opcode,
-                     funct3, opcodestr, "$rd, $rs1, $imm"> {
+                     funct3, opcodestr, argstr> {
   bits<12> imm;
 
   let Inst{31-20} = imm;
@@ -86,6 +87,10 @@ class ToyFormatIShift<bits<7> opcode, bits<3> funct3, bits<7> imm12_hi, string o
   let Inst{24-20} = shamt;
   let Inst{31-25} = imm12_hi;
 }
+
+let mayLoad = 1, mayStore = 1, hasSideEffects = 0 in
+  class ToyFormatILoad<bits<3> funct3, string opcodestr>
+      : ToyFormatI<OPC_LOAD.Opcode, funct3, opcodestr, "$rd, $imm($rs1)"> {}
 
 class ToyFormatS<bits<7> opcode, bits<3> funct3, string opcodestr>
     : ToyInst<(outs), (ins GPR:$rs1, GPR:$rs2, simm12:$imm), opcode,

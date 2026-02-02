@@ -22,13 +22,11 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   def BGEU : ToyFormatB<OPC_BRANCH.Opcode, 0b111, "bgeu">;
 }
 
-let mayLoad = 1, mayStore = 1, hasSideEffects = 0 in {
-  def LB  : ToyFormatI<OPC_LOAD.Opcode, 0b000, "lb">;
-  def LH  : ToyFormatI<OPC_LOAD.Opcode, 0b001, "lh">;
-  def LW  : ToyFormatI<OPC_LOAD.Opcode, 0b010, "lw">;
-  def LBU : ToyFormatI<OPC_LOAD.Opcode, 0b100, "lbu">;
-  def LHU : ToyFormatI<OPC_LOAD.Opcode, 0b101, "lhu">;
-}
+def LB  : ToyFormatILoad<0b000, "lb">;
+def LH  : ToyFormatILoad<0b001, "lh">;
+def LW  : ToyFormatILoad<0b010, "lw">;
+def LBU : ToyFormatILoad<0b100, "lbu">;
+def LHU : ToyFormatILoad<0b101, "lhu">;
 
 let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in {
   def SB : ToyFormatS<OPC_STORE.Opcode, 0b000, "sb">;

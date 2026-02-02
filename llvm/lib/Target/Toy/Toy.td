@@ -15,6 +15,10 @@ def ToyAsmParser : AsmParser {
   let ShouldEmitMatchRegisterAltName = 1;
 }
 
+def ToyAsmParserVariant : AsmParserVariant {
+  let TokenizingCharacters = "()[]*!";
+}
+
 // To handle the following error, add this `defm`
 // error: missing target override for pseudoinstruction using PointerLikeRegClass
 defm : RemapAllTargetPseudoPointerOperands<GPR>;
@@ -22,4 +26,5 @@ defm : RemapAllTargetPseudoPointerOperands<GPR>;
 def Toy : Target {
   let InstructionSet = ToyInstrInfo;
   let AssemblyParsers = [ToyAsmParser];
+  let AssemblyParserVariants = [ToyAsmParserVariant];
 }

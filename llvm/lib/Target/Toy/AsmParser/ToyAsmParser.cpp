@@ -2,6 +2,7 @@
 #include "MCTargetDesc/ToyMCTargetDesc.h"
 #include "TargetInfo/ToyTargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -39,6 +40,7 @@ public:
   bool parseOperand(OperandVector &Operands);
   ParseStatus parseExpression(OperandVector &Operands);
   ParseStatus parseRegister(OperandVector &Operands);
+  ParseStatus parseMemOpBaseRegister(OperandVector &Operands);
 
 #define GET_ASSEMBLER_HEADER
 #include "ToyGenAsmMatcher.inc"
@@ -147,8 +149,8 @@ struct ToyOperand final : public MCParsedAsmOperand {
     return Op;
   }
 
-  static std::unique_ptr<ToyOperand> createExpr(const MCExpr *Expr, bool IsToy64, SMLoc S,
-                                                SMLoc E) {
+  static std::unique_ptr<ToyOperand>
+  createExpr(const MCExpr *Expr, bool IsToy64, SMLoc S, SMLoc E) {
     auto Op = std::make_unique<ToyOperand>(KindTy::Expression);
     Op->Expr.Expr = Expr;
     Op->Expr.IsToy64 = IsToy64;
@@ -184,7 +186,6 @@ bool ToyAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
 }
 
 ParseStatus ToyAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
-
                                            SMLoc &EndLoc) {
   llvm_unreachable("TODO");
 }
@@ -237,8 +238,12 @@ bool ToyAsmParser::parseOperand(OperandVector &Operands) {
     return false;
 
   // parse expression, now this is an immedidate
-  if (parseExpression(Operands).isSuccess())
+  if (parseExpression(Operands).isSuccess()) {
+    // immediate may be followed by '(' + register + ')'
+    if (getLexer().getTok().is(AsmToken::LParen))
+      return !parseMemOpBaseRegister(Operands).isSuccess();
     return false;
+  }
 
   return true;
 }
@@ -276,6 +281,21 @@ ParseStatus ToyAsmParser::parseRegister(OperandVector &Operands) {
 
   Operands.push_back(ToyOperand::createReg(Reg, getLoc(), getEndLoc()));
   getLexer().Lex(); // eat register
+  return ParseStatus::Success;
+}
+
+ParseStatus ToyAsmParser::parseMemOpBaseRegister(OperandVector &Operands) {
+  if (getParser().parseToken(AsmToken::LParen, "expected '('"))
+    return ParseStatus::Failure;
+  Operands.push_back(ToyOperand::createToken("(", getLoc()));
+
+  if (!parseRegister(Operands).isSuccess())
+    return ParseStatus::Failure;
+
+  if (getParser().parseToken(AsmToken::RParen, "expected ')'"))
+    return ParseStatus::Failure;
+  Operands.push_back(ToyOperand::createToken(")", getLoc()));
+
   return ParseStatus::Success;
 }
 
