@@ -7,7 +7,7 @@ def uimm20      : Operand<i32>, ImmLeaf<i32, "return isUint<20>(Imm);">;
 
 include "ToyInstrFormats.td"
 
-// -------------------------------- RV32I/RV64I --------------------------------
+// -------------------------------- RV32I/RV64I -------------------------------
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   def LUI   : ToyFormatU<OPC_LUI.Opcode, "lui">;
   def AUIPC : ToyFormatU<OPC_AUPIC.Opcode, "auipc">;
@@ -28,11 +28,9 @@ def LW  : ToyFormatILoad<0b010, "lw">;
 def LBU : ToyFormatILoad<0b100, "lbu">;
 def LHU : ToyFormatILoad<0b101, "lhu">;
 
-let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in {
-  def SB : ToyFormatS<OPC_STORE.Opcode, 0b000, "sb">;
-  def SH : ToyFormatS<OPC_STORE.Opcode, 0b001, "sh">;
-  def SW : ToyFormatS<OPC_STORE.Opcode, 0b010, "sw">;
-}
+def SB : ToyFormatSStore<0b000, "sb">;
+def SH : ToyFormatSStore<0b001, "sh">;
+def SW : ToyFormatSStore<0b010, "sw">;
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   def ADDI  : ToyFormatI<OPC_OP_IMM.Opcode, 0b000, "addi">;
@@ -57,4 +55,4 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   def OR   : ToyFormatR<OPC_OP.Opcode, 0b110, 0b0000000, "or">;
   def AND  : ToyFormatR<OPC_OP.Opcode, 0b111, 0b0000000, "and">;
 }
-// -------------------------------- RV32I/RV64I --------------------------------
+// -------------------------------- RV32I/RV64I -------------------------------

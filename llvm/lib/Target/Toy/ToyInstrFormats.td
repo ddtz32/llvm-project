@@ -92,9 +92,9 @@ let mayLoad = 1, mayStore = 1, hasSideEffects = 0 in
   class ToyFormatILoad<bits<3> funct3, string opcodestr>
       : ToyFormatI<OPC_LOAD.Opcode, funct3, opcodestr, "$rd, $imm($rs1)"> {}
 
-class ToyFormatS<bits<7> opcode, bits<3> funct3, string opcodestr>
-    : ToyInst<(outs), (ins GPR:$rs1, GPR:$rs2, simm12:$imm), opcode,
-              opcodestr, "$rs1, $rs2, $imm"> {
+class ToyFormatS<bits<7> opcode, bits<3> funct3, string opcodestr,
+                 string argstr = "$rs1, $rs2, $imm">
+    : ToyInst<(outs), (ins GPR:$rs1, GPR:$rs2, simm12:$imm), opcode, opcodestr, argstr> {
   bits<5> rs1;
   bits<5> rs2;
   bits<12> imm;
@@ -105,6 +105,10 @@ class ToyFormatS<bits<7> opcode, bits<3> funct3, string opcodestr>
   let Inst{24-20} = rs2;
   let Inst{31-25} = imm{11-5};
 }
+
+let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
+  class ToyFormatSStore<bits<3> funct3, string opcodestr>
+      : ToyFormatS<OPC_STORE.Opcode, funct3, opcodestr, "$rs2, $imm($rs1)">;
 
 class ToyFormatB<bits<7> opcode, bits<3> funct3, string opcodestr>
     : ToyInst<(outs), (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm), opcode,
