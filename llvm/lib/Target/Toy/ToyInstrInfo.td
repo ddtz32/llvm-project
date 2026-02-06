@@ -9,9 +9,9 @@ include "ToyInstrFormats.td"
 
 // -------------------------------- RV32I/RV64I -------------------------------
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
-  def LUI   : ToyFormatU<OPC_LUI.Opcode, "lui">;
+  def LUI   : ToyFormatU<OPC_LUI.Opcode,   "lui">;
   def AUIPC : ToyFormatU<OPC_AUPIC.Opcode, "auipc">;
-  def JAL   : ToyFormatJ<OPC_JAL.Opcode, "jal">;
+  def JAL   : ToyFormatJ<OPC_JAL.Opcode,   "jal">;
   def JALR  : ToyFormatI<OPC_JALR.Opcode, 0b000, "jal">;
 
   def BEQ  : ToyFormatB<OPC_BRANCH.Opcode, 0b000, "beq">;
@@ -56,3 +56,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   def AND  : ToyFormatR<OPC_OP.Opcode, 0b111, 0b0000000, "and">;
 }
 // -------------------------------- RV32I/RV64I -------------------------------
+
+// ---------------------------------- Pseudo ----------------------------------
+include "ToyInstrPseudo.td"
+// ---------------------------------- Pseudo ----------------------------------

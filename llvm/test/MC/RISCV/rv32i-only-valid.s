@@ -44,7 +44,7 @@ beqz t2, 0xfffff222
 # CHECK-ASM: .insn b 99, 0, a0, a1, -3004
 # CHECK-ASM: encoding: [0x63,0x02,0xb5,0xc4]
 # CHECK-OBJ: beq a0, a1, 0xfffff460
-# .insn b  BRANCH,  0, a0, a1, 0xfffff444
+.insn b  BRANCH,  0, a0, a1, 0xfffff444
 
 # CHECK-ASM: jal ra, -2458
 # CHECK-ASM: encoding: [0xef,0xf0,0x6f,0xe6]
@@ -64,4 +64,4 @@ j 0xfffffaaa
 # CHECK-ASM: .insn j 111, a0, -820
 # CHECK-ASM: encoding: [0x6f,0x65,0xe6,0xff]
 # CHECK-OBJ: jal a0, 0xfff6682a
-# .insn j JAL, a0, 0xfffffccc
+.insn j JAL, a0, 0xfffffccc
