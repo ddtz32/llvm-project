@@ -1,9 +1,11 @@
+#include "MCTargetDesc/ToyBaseInfo.h"
 #include "MCTargetDesc/ToyInstPrinter.h"
 #include "MCTargetDesc/ToyMCTargetDesc.h"
 #include "TargetInfo/ToyTargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
@@ -41,6 +43,7 @@ public:
   ParseStatus parseExpression(OperandVector &Operands);
   ParseStatus parseRegister(OperandVector &Operands);
   ParseStatus parseMemOpBaseRegister(OperandVector &Operands);
+  ParseStatus parseFenceArg(OperandVector &Operands);
 
 #define GET_ASSEMBLER_HEADER
 #include "ToyGenAsmMatcher.inc"
@@ -53,6 +56,7 @@ struct ToyOperand final : public MCParsedAsmOperand {
     Token,
     Expression,
     Register,
+    Fence,
   } Kind;
 
   struct ExprOp {
@@ -64,6 +68,7 @@ struct ToyOperand final : public MCParsedAsmOperand {
     StringRef Tok;
     ExprOp Expr;
     MCRegister Reg;
+    unsigned Fence;
   };
 
   SMLoc StartLoc, EndLoc;
@@ -71,25 +76,61 @@ struct ToyOperand final : public MCParsedAsmOperand {
   explicit ToyOperand(KindTy Kind) : MCParsedAsmOperand(), Kind(Kind) {}
 
   bool isToken() const override { return Kind == KindTy::Token; }
-  bool isImm() const override {
-    return isExpr() && dyn_cast<MCConstantExpr>(getExpr());
-  }
+  bool isImm() const override { return isExpr(); }
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isMem() const override { llvm_unreachable("TODO"); }
   bool isExpr() const { return Kind == KindTy::Expression; }
+  bool isToy64Expr() const {
+    assert(isExpr() && "Invalid type access!");
+    return Expr.IsToy64;
+  }
+  bool isFenceArg() const { return Kind == KindTy::Fence; }
+
+  static bool evaluateConstantExpr(const MCExpr *Expr, int64_t &Imm) {
+    if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr)) {
+      Imm = CE->getValue();
+      return true;
+    }
+    return false;
+  }
+
+  static int64_t fixImmediateForToy32(int64_t Imm, bool IsToy64Imm) {
+    if (!IsToy64Imm && isUInt<32>(Imm))
+      return SignExtend64<32>(Imm);
+    return Imm;
+  }
+
+  template <unsigned N> bool isSImm() const {
+    if (!isExpr())
+      return false;
+
+    int64_t Imm;
+    bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
+    return IsConstant && isInt<N>(fixImmediateForToy32(Imm, isToy64Expr()));
+  }
+
+  template <unsigned N> bool isSImmLsb0() const {
+    if (!isExpr())
+      return false;
+
+    int64_t Imm;
+    bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
+    return IsConstant &&
+           isShiftedInt<N - 1, 1>(fixImmediateForToy32(Imm, isToy64Expr()));
+  }
+
+  template <unsigned N> bool isUImm() const {
+    if (!isExpr())
+      return false;
+
+    int64_t Imm;
+    bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
+    return IsConstant && isUInt<N>(fixImmediateForToy32(Imm, isToy64Expr()));
+  }
 
   StringRef getToken() const {
     assert(isToken() && "Invalid type access!");
     return Tok;
-  }
-
-  int64_t getImm() const {
-    assert(isImm() && "Invalid type access!");
-    int64_t Imm = dyn_cast<MCConstantExpr>(getExpr())->getValue();
-    if (getExprToy64())
-      return Imm;
-    assert(isUInt<32>(Imm));
-    return SignExtend64<32>(Imm);
   }
 
   MCRegister getReg() const override {
@@ -102,9 +143,9 @@ struct ToyOperand final : public MCParsedAsmOperand {
     return Expr.Expr;
   }
 
-  bool getExprToy64() const {
-    assert(isExpr() && "Invalid type access!");
-    return Expr.IsToy64;
+  unsigned getFence() const {
+    assert(isFenceArg() && "Invalid type access!");
+    return Fence;
   }
 
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -119,14 +160,26 @@ struct ToyOperand final : public MCParsedAsmOperand {
       assert(isImm() && "TODO");
       OS << "<imm: ";
       MAI.printExpr(OS, *getExpr());
-      OS << ' ' << (getExprToy64() ? "toy64" : "toy32") << '>';
+      OS << ' ' << (isToy64Expr() ? "toy64" : "toy32") << '>';
       break;
     case KindTy::Register:
       // TODO
       OS << "<reg: " << (Reg ? ToyInstPrinter::getRegisterName(Reg) : "noreg")
          << " (" << Reg.id() << ")>";
       break;
+    case KindTy::Fence:
+      OS << "<fence: " << getFence() << '>';
+      break;
     }
+  }
+
+  static void addExpr(MCInst &Inst, const MCExpr *Expr, bool IsToy64) {
+    int64_t Imm;
+    bool IsConstant = evaluateConstantExpr(Expr, Imm);
+    if (IsConstant)
+      Inst.addOperand(MCOperand::createImm(fixImmediateForToy32(Imm, IsToy64)));
+    else
+      Inst.addOperand(MCOperand::createExpr(Expr));
   }
 
   // convert asm parsed operands to MCInst
@@ -138,7 +191,12 @@ struct ToyOperand final : public MCParsedAsmOperand {
 
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getImm()));
+    addExpr(Inst, getExpr(), isToy64Expr());
+  }
+
+  void addFenceArgOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getFence()));
   }
 
   static std::unique_ptr<ToyOperand> createToken(StringRef Tok, SMLoc Loc) {
@@ -163,6 +221,15 @@ struct ToyOperand final : public MCParsedAsmOperand {
                                                SMLoc E) {
     auto Op = std::make_unique<ToyOperand>(KindTy::Register);
     Op->Reg = Reg;
+    Op->StartLoc = S;
+    Op->EndLoc = E;
+    return Op;
+  }
+
+  static std::unique_ptr<ToyOperand> createFenceArg(unsigned Val, SMLoc S,
+                                                    SMLoc E) {
+    auto Op = std::make_unique<ToyOperand>(KindTy::Fence);
+    Op->Fence = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -297,6 +364,58 @@ ParseStatus ToyAsmParser::parseMemOpBaseRegister(OperandVector &Operands) {
   Operands.push_back(ToyOperand::createToken(")", getLoc()));
 
   return ParseStatus::Success;
+}
+
+ParseStatus ToyAsmParser::parseFenceArg(OperandVector &Operands) {
+  const AsmToken &Token = getLexer().getTok();
+  if (Token.is(AsmToken::Integer)) {
+    if (Token.getIntVal() != 0)
+      goto ParseFail;
+    Operands.push_back(ToyOperand::createFenceArg(0, getLoc(), getEndLoc()));
+    getLexer().Lex(); // eat 0
+    return ParseStatus::Success;
+  }
+
+  if (Token.is(AsmToken::Identifier)) {
+    StringRef Str = Token.getIdentifier();
+    unsigned Imm = 0;
+    bool Valid = true;
+    char Prev = '\0';
+    for (char Cur : Str) {
+      switch (Cur) {
+      default:
+        Valid = false;
+        break;
+      case 'i':
+        Imm |= static_cast<unsigned>(ToyFenceField::I);
+        break;
+      case 'o':
+        Imm |= static_cast<unsigned>(ToyFenceField::O);
+        break;
+      case 'r':
+        Imm |= static_cast<unsigned>(ToyFenceField::R);
+        break;
+      case 'w':
+        Imm |= static_cast<unsigned>(ToyFenceField::W);
+        break;
+      }
+      if (Cur < Prev)
+        Valid = false;
+      if (!Valid)
+        break;
+      Prev = Cur;
+    }
+
+    if (!Valid)
+      goto ParseFail;
+
+    Operands.push_back(ToyOperand::createFenceArg(Imm, getLoc(), getEndLoc()));
+    getLexer().Lex(); // eat iorw
+    return ParseStatus::Success;
+  }
+ParseFail:
+  return TokError("operand must be formed of letters selected in-order from "
+                  "'iorw' or be 0");
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeToyAsmParser() {

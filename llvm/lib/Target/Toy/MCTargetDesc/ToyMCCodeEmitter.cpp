@@ -2,6 +2,7 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/EndianStream.h"
@@ -28,6 +29,11 @@ public:
 
   // ToyGenMCCodeEmitter.inc use this function to encode operand
   uint64_t getMachineOpValue(const MCInst &MI, const MCOperand &MO,
+                             SmallVectorImpl<MCFixup> &Fixups,
+                             const MCSubtargetInfo &STI) const;
+
+  template <unsigned N>
+  uint64_t getImmOpValueAsrN(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 };
@@ -62,6 +68,17 @@ uint64_t ToyMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 
   llvm_unreachable("Invalid MCOperand");
   return 0;
+}
+
+template <unsigned N>
+uint64_t ToyMCCodeEmitter::getImmOpValueAsrN(const MCInst &MI, unsigned OpNo,
+                                             SmallVectorImpl<MCFixup> &Fixups,
+                                             const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  assert(MO.isImm());
+  uint64_t Imm = MO.getImm();
+  assert((Imm & ((1 << N) - 1)) == 0 && "LSB is noe-zero");
+  return Imm >> N;
 }
 
 MCCodeEmitter *llvm::createToyMCCodeEmitter(const MCInstrInfo &MCII,

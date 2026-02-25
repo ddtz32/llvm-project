@@ -10,8 +10,8 @@
       "program": "${workspaceFolder}/build/bin/llvm-mc",
       "args": [
         "llvm/test/MC/RISCV/rv32i-only-valid.s",
-        "-triple=toy32",
-        // "-triple=riscv32",
+        // "-triple=toy32",
+        "-triple=riscv32",
         "-M",
         "no-aliases",
         "-show-encoding",
@@ -38,8 +38,7 @@
           },
           {
             "description": "Load llvm pretty printer file",
-            // "text": "source ${workspaceFolder}/llvm/utils/gdb-scripts/prettyprinters.py",
-            "text": "command script import ${workspaceFolder}/llvm/utils/lldbDataFormatters.py"
+            "text": "source ${workspaceFolder}/llvm/utils/gdb-scripts/prettyprinters.py"
           }
         ]
       },

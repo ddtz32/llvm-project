@@ -1,6 +1,6 @@
-class ToyOpcode<string name, bits<7> opcode> {
-  string Name = name;
-  bits<7> Opcode = opcode;
+class ToyOpcode<string name, bits<7> val> {
+  string  Name  = name;
+  bits<7> Value = val;
 }
 
 // riscv-unprivileged.pdf ch36 Table 72
@@ -32,119 +32,116 @@ def OPC_SYSTEM    : ToyOpcode<"SYSTEM",    0b1110011>;
 def OPC_OP_VE     : ToyOpcode<"OP_VE",     0b1110111>;
 def OPC_CUSTOM_3  : ToyOpcode<"CUSTOM_3",  0b1111011>;
 
-class ToyInst<dag outs, dag ins, bits<7> opcode, string opcodestr,
-              string argstr> : Instruction {
+// NOTE: Except for the 5-bit immediates used in CSR instructions, immediates
+// are always sign-extended
+class ToyInst<dag outs, dag ins, string opcodestr, string argstr>
+    : Instruction {
   field bits<32> Inst;
-  let Inst{6-0} = opcode;
 
-  let Namespace = "Toy";
+  let Namespace      = "Toy";
   let OutOperandList = outs;
-  let InOperandList = ins;
-  let AsmString = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
-
-  let Size = 4;
+  let InOperandList  = ins;
+  let AsmString      = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
+  let Size           = 4;
 }
 
-class ToyFormatR<bits<7> opcode, bits<3> funct3, bits<7> funct7, string opcodestr>
-    : ToyInst<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2), opcode, opcodestr,
-              "$rd, $rs1, $rs2"> {
-  bits<5> rd;
-  bits<5> rs1;
+class ToyFormatR<bits<7> funct7, bits<3> funct3, ToyOpcode opcode, dag outs,
+                 dag ins, string opcodestr, string argstr>
+    : ToyInst<outs, ins, opcodestr, argstr> {
   bits<5> rs2;
-
-  let Inst{11-7}  = rd;
-  let Inst{14-12} = funct3;
-  let Inst{19-15} = rs1;
-  let Inst{24-20} = rs2;
-  let Inst{31-25} = funct7;
-}
-
-class ToyFormatIBase<dag outs, dag ins, bits<7> opcode, bits<3> funct3,
-                     string opcodestr, string argstr>
-    : ToyInst<outs, ins, opcode, opcodestr, argstr> {
-  bits<5> rd;
   bits<5> rs1;
+  bits<5> rd;
 
-  let Inst{11-7}  = rd;
-  let Inst{14-12} = funct3;
+  let Inst{31-25} = funct7;
+  let Inst{24-20} = rs2;
   let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode.Value;
 }
 
-class ToyFormatI<bits<7> opcode, bits<3> funct3, string opcodestr,
-                 string argstr = "$rd, $rs1, $imm">
-    : ToyFormatIBase<(outs GPR:$rd), (ins GPR:$rs1, simm12:$imm), opcode,
-                     funct3, opcodestr, argstr> {
+class ToyFormatIBase<bits<3> funct3, ToyOpcode opcode, dag outs, dag ins,
+                     string opcodestr, string argstr>
+    : ToyInst<outs, ins, opcodestr, argstr> {
+  bits<5> rs1;
+  bits<5> rd;
+
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode.Value;
+}
+
+class ToyFormatI<bits<3> funct3, ToyOpcode opcode, dag outs, dag ins,
+                 string opcodestr, string argstr>
+    : ToyFormatIBase<funct3, opcode, outs, ins, opcodestr, argstr> {
   bits<12> imm;
 
   let Inst{31-20} = imm;
 }
 
-class ToyFormatIShift<bits<7> opcode, bits<3> funct3, bits<7> imm12_hi, string opcodestr>
-    : ToyFormatIBase<(outs GPR:$rd), (ins GPR:$rs1, uimm5:$shamt), opcode,
-                     funct3, opcodestr, "$rd, $rs1, $shamt"> {
+class ToyFormatIShift<bits<7> imm, bits<3> funct3, ToyOpcode opcode, dag outs,
+                      dag ins, string opcodestr, string argstr>
+    : ToyFormatIBase<funct3, opcode, outs, ins, opcodestr, argstr> {
   bits<5> shamt;
 
+  let Inst{31-25} = imm;
   let Inst{24-20} = shamt;
-  let Inst{31-25} = imm12_hi;
 }
 
-let mayLoad = 1, mayStore = 1, hasSideEffects = 0 in
-  class ToyFormatILoad<bits<3> funct3, string opcodestr>
-      : ToyFormatI<OPC_LOAD.Opcode, funct3, opcodestr, "$rd, $imm($rs1)"> {}
-
-class ToyFormatS<bits<7> opcode, bits<3> funct3, string opcodestr,
-                 string argstr = "$rs1, $rs2, $imm">
-    : ToyInst<(outs), (ins GPR:$rs1, GPR:$rs2, simm12:$imm), opcode, opcodestr, argstr> {
-  bits<5> rs1;
-  bits<5> rs2;
+class ToyFormatS<bits<3> funct3, ToyOpcode opcode, dag outs, dag ins,
+                 string opcodestr, string argstr>
+    : ToyInst<outs, ins, opcodestr, argstr> {
   bits<12> imm;
-
-  let Inst{11-7}  = imm{4-0};
-  let Inst{14-12} = funct3;
-  let Inst{19-15} = rs1;
-  let Inst{24-20} = rs2;
-  let Inst{31-25} = imm{11-5};
-}
-
-let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in
-  class ToyFormatSStore<bits<3> funct3, string opcodestr>
-      : ToyFormatS<OPC_STORE.Opcode, funct3, opcodestr, "$rs2, $imm($rs1)">;
-
-class ToyFormatB<bits<7> opcode, bits<3> funct3, string opcodestr>
-    : ToyInst<(outs), (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm), opcode,
-              opcodestr, "$rs1, $rs2, $imm"> {
-  bits<5> rs1;
   bits<5> rs2;
-  bits<13> imm;
+  bits<5> rs1;
 
-  let Inst{7}     = imm{11};
-  let Inst{11-8}  = imm{4-1};
-  let Inst{14-12} = funct3;
-  let Inst{19-15} = rs1;
+  let Inst{31-25} = imm{11-5};
   let Inst{24-20} = rs2;
-  let Inst{30-25} = imm{10-5};
-  let Inst{31}    = imm{12};
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-7}  = imm{4-0};
+  let Inst{6-0}   = opcode.Value;
 }
 
-class ToyFormatU<bits<7> opcode, string opcodestr>
-    : ToyInst<(outs GPR:$rd), (ins uimm20:$imm), opcode,
-              opcodestr, "$rd, $imm"> {
-  bits<5> rd;
+class ToyFormatB<bits<3> funct3, ToyOpcode opcode, dag outs, dag ins,
+                 string opcodestr, string argstr>
+    : ToyInst<outs, ins, opcodestr, argstr> {
+  bits<12> imm;
+  bits<5> rs2;
+  bits<5> rs1;
+
+  let Inst{31}    = imm{11};
+  let Inst{30-25} = imm{9-4};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-8}  = imm{3-0};
+  let Inst{7}     = imm{10};
+  let Inst{6-0}   = opcode.Value;
+}
+
+class ToyFormatU<ToyOpcode opcode, dag outs, dag ins, string opcodestr,
+                string argstr>
+    : ToyInst<outs, ins, opcodestr, argstr> {
   bits<20> imm;
+  bits<5> rd;
 
-  let Inst{11-7}  = rd;
   let Inst{31-12} = imm;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode.Value;
 }
 
-class ToyFormatJ<bits<7> opcode, string opcodestr>
-    : ToyInst<(outs GPR:$rd), (ins simm21_lsb0:$imm), opcode,
-              opcodestr, "$rd, $imm"> {
+class ToyFormatJ<ToyOpcode opcode, dag outs, dag ins, string opcodestr,
+                string argstr>
+    : ToyInst<outs, ins, opcodestr, argstr> {
+  bits<20> imm;
   bits<5> rd;
-  bits<21> imm;
 
+  let Inst{31}    = imm{19};
+  let Inst{30-21} = imm{9-0};
+  let Inst{20}    = imm{10};
+  let Inst{19-12} = imm{18-11};
   let Inst{11-7}  = rd;
-  let Inst{19-12} = imm{19-12};
-  let Inst{20}    = imm{11};
-  let Inst{30-21} = imm{10-1};
-  let Inst{31}    = imm{20};
+  let Inst{6-0}   = opcode.Value;
 }
