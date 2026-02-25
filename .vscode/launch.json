@@ -6,7 +6,6 @@
   "configurations": [
     {
       "name": "llvm-mc",
-      "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/bin/llvm-mc",
       "args": [
@@ -17,30 +16,41 @@
         "no-aliases",
         "-show-encoding",
         "-show-inst-operands",
+        "-debug-only=asm-matcher"
       ],
-      "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
-      "environment": [],
-      "externalConsole": false,
-      // "MIMode": "gdb",
-      "MIMode": "lldb",
-      "setupCommands": [
-        {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        },
-        {
-          "description": "Set Disassembly Flavor to Intel",
-          "text": "-gdb-set disassembly-flavor intel",
-          "ignoreFailures": true
-        },
-        {
-          "description": "Load llvm pretty printer file",
-          // "text": "source ${workspaceFolder}/llvm/utils/gdb-scripts/prettyprinters.py",
-          "text": "command script import ${workspaceFolder}/llvm/utils/lldbDataFormatters.py",
-        }
-      ]
+      "linux": {
+        "type": "cppdbg",
+        "stopAtEntry": false,
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          },
+          {
+            "description": "Set Disassembly Flavor to Intel",
+            "text": "-gdb-set disassembly-flavor intel",
+            "ignoreFailures": true
+          },
+          {
+            "description": "Load llvm pretty printer file",
+            // "text": "source ${workspaceFolder}/llvm/utils/gdb-scripts/prettyprinters.py",
+            "text": "command script import ${workspaceFolder}/llvm/utils/lldbDataFormatters.py"
+          }
+        ]
+      },
+      "osx": {
+        "type": "lldb",
+        "stopOnEntry": false,
+        "console": "integratedTerminal",
+        "initCommands": [
+          "command script import ${workspaceFolder}/llvm/utils/lldbDataFormatters.py"
+        ]
+      }
     }
   ]
 }
