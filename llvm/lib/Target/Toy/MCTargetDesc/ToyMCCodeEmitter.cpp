@@ -76,7 +76,7 @@ uint64_t ToyMCCodeEmitter::getImmOpValueAsrN(const MCInst &MI, unsigned OpNo,
                                              const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
   assert(MO.isImm());
-  uint64_t Imm = MO.getImm();
+  int64_t Imm = MO.getImm();
   assert((Imm & ((1 << N) - 1)) == 0 && "LSB is noe-zero");
   return Imm >> N;
 }

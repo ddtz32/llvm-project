@@ -10,8 +10,8 @@
       "program": "${workspaceFolder}/build/bin/llvm-mc",
       "args": [
         "llvm/test/MC/RISCV/rv32i-only-valid.s",
-        // "-triple=toy32",
-        "-triple=riscv32",
+        "-triple=toy32",
+        // "-triple=riscv32",
         "-M",
         "no-aliases",
         "-show-encoding",

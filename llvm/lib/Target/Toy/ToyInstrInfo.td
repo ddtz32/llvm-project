@@ -1,12 +1,31 @@
-class ToyOperand : Operand<i32>;
-
+//===----------------------------------------------------------------------===//
+// Asm Operand
+//===----------------------------------------------------------------------===//
 class ImmAsmOperand<string prefix, int width, string suffix = "">
     : AsmOperandClass {
   let Name = !strconcat(prefix, "Imm", !cast<string>(width), suffix);
   let PredicateMethod = !strconcat("is", prefix, "Imm", suffix,
                                   "<", !cast<string>(width), ">");
   let RenderMethod = "addImmOperands";
+  // ParserMethod default to parseOperand
 }
+
+def FenceArgAsmOperand : AsmOperandClass {
+  let Name = "FenceArg";
+  // PredicateMethod default to isFenceArg
+  let RenderMethod = "addFenceArgOperands";
+  let ParserMethod = "parseFenceArg";
+}
+
+def InsnDirectiveOpcodeAsmOperand : ImmAsmOperand<"U", 7> {
+  let Name = "InsnDirectiveOpcode";
+  let ParserMethod = "parseInsnDirectiveOpcode";
+}
+
+//===----------------------------------------------------------------------===//
+// Operand
+//===----------------------------------------------------------------------===//
+class ToyOperand : Operand<i32>;
 
 class ImmOperand<string prefix, int width, string suffix = ""> : ToyOperand {
   let ParserMatchClass = ImmAsmOperand<prefix, width, suffix>;
@@ -21,21 +40,20 @@ class SImmOperandLsb0<int width> : SImmOperand<width, "Lsb0"> {
   // let DecoderMethod = "decodeSImmOperandAndLslN<" # width # ", 1>";
 }
 
-def simm12      : SImmOperand<12>;
-def simm13_lsb0 : SImmOperandLsb0<13>;
-def simm21_lsb0 : SImmOperandLsb0<21>;
+def simm12       : SImmOperand<12>;
+def simm13_lsb0  : SImmOperandLsb0<13>;
+def simm21_lsb0  : SImmOperandLsb0<21>;
 
-def uimm5       : UImmOperand<5>;
-def uimm20      : UImmOperand<20>;
-
-def FenceArgAsmOperand : AsmOperandClass {
-  let Name = "FenceArg";
-  // PredicateMethod default to isFenceArg
-  let RenderMethod = "addFenceArgOperands";
-  let ParserMethod = "parseFenceArg";
+def uimm3        : UImmOperand<3>;
+def uimm5        : UImmOperand<5>;
+def uimm7        : UImmOperand<7>;
+def uimm7_opcode : UImmOperand<7> {
+  let ParserMatchClass = InsnDirectiveOpcodeAsmOperand;
 }
+def uimm20       : UImmOperand<20>;
+def uimm32       : UImmOperand<32>;
 
-def fencearg : ToyOperand {
+def fencearg     : ToyOperand {
   let ParserMatchClass = FenceArgAsmOperand;
 }
 
@@ -160,4 +178,5 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
 // TODO: ECALL, EBREAK
 // ---------------------------------- Pseudo ----------------------------------
 include "ToyInstrPseudo.td"
+include "ToyInstrDirective.td"
 // ---------------------------------- Pseudo ----------------------------------

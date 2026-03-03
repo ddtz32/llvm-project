@@ -3,6 +3,18 @@ class ToyOpcode<string name, bits<7> val> {
   bits<7> Value = val;
 }
 
+def ToyOpcodesList : GenericTable {
+  let FilterClass = "ToyOpcode";
+  let Fields = [ "Name", "Value" ];
+  let PrimaryKey = [ "Value" ];
+  let PrimaryKeyName = "lookupToyOpcodeByValue";
+}
+
+def lookupToyOpcodeByName : SearchIndex{
+  let Table = ToyOpcodesList;
+  let Key = [ "Name" ];
+}
+
 // riscv-unprivileged.pdf ch36 Table 72
 def OPC_LOAD      : ToyOpcode<"LOAD",      0b0000011>;
 def OPC_LOAD_FP   : ToyOpcode<"LOAD_FP",   0b0000111>;

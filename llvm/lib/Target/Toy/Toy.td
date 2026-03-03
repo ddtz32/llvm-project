@@ -1,5 +1,7 @@
 include "llvm/Target/Target.td"
 
+include "llvm/TableGen/SearchableTable.td"
+
 include "ToyFeatures.td"
 include "ToyProcessors.td"
 

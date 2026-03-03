@@ -2,16 +2,22 @@
 #include "MCTargetDesc/ToyInstPrinter.h"
 #include "MCTargetDesc/ToyMCTargetDesc.h"
 #include "TargetInfo/ToyTargetInfo.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SMLoc.h"
+#include <cstdint>
+#include <optional>
 
 using namespace llvm;
 
@@ -27,23 +33,28 @@ public:
   SMLoc getEndLoc() const { return getParser().getTok().getEndLoc(); }
   bool isToy64() const { return getSTI().hasFeature(Toy::Feature64Bit); }
 
-  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
-                               SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &S, SMLoc &E) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &S, SMLoc &E) override;
 
   bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
+  bool parseDirectiveInsn(SMLoc NmaeLoc);
 
   bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool parseOperand(OperandVector &Operands);
+  bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
   ParseStatus parseExpression(OperandVector &Operands);
   ParseStatus parseRegister(OperandVector &Operands);
   ParseStatus parseMemOpBaseRegister(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
+  ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
+
+  bool generateImmOutOfRangeError(SMLoc ErrorLoc, int64_t Lower, int64_t Upper,
+                                  const Twine &Msg);
 
 #define GET_ASSEMBLER_HEADER
 #include "ToyGenAsmMatcher.inc"
@@ -199,11 +210,11 @@ struct ToyOperand final : public MCParsedAsmOperand {
     Inst.addOperand(MCOperand::createImm(getFence()));
   }
 
-  static std::unique_ptr<ToyOperand> createToken(StringRef Tok, SMLoc Loc) {
+  static std::unique_ptr<ToyOperand> createToken(StringRef Tok, SMLoc L) {
     auto Op = std::make_unique<ToyOperand>(KindTy::Token);
     Op->Tok = Tok;
-    Op->StartLoc = Loc;
-    Op->EndLoc = Loc;
+    Op->StartLoc = L;
+    Op->EndLoc = L;
     return Op;
   }
 
@@ -247,13 +258,12 @@ ToyAsmParser::ToyAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                            const MCTargetOptions &Options)
     : MCTargetAsmParser(Options, STI, MII) {}
 
-bool ToyAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
-                                 SMLoc &EndLoc) {
+bool ToyAsmParser::parseRegister(MCRegister &Reg, SMLoc &S, SMLoc &E) {
   llvm_unreachable("TODO");
 }
 
-ParseStatus ToyAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
-                                           SMLoc &EndLoc) {
+ParseStatus ToyAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &S,
+                                           SMLoc &E) {
   llvm_unreachable("TODO");
 }
 
@@ -270,16 +280,75 @@ bool ToyAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
 
   // parse first operand
-  if (parseOperand(Operands))
+  if (parseOperand(Operands, Name))
     return true;
 
   // parse ',' + operand
   while (parseOptionalToken(AsmToken::Comma)) {
-    if (parseOperand(Operands))
+    if (parseOperand(Operands, Name))
       return true;
   }
 
   return getParser().parseEOL();
+}
+
+ParseStatus ToyAsmParser::parseDirective(AsmToken DirectiveID) {
+  StringRef IDVal = DirectiveID.getIdentifier();
+  if (IDVal == ".insn")
+    return parseDirectiveInsn(DirectiveID.getLoc());
+
+  return ParseStatus::NoMatch;
+}
+
+// TODO: length must be 4, and value must 32 bit value
+// parseDirectiveInsn
+// ::= .insn [ value ]
+// ::= .insn [ length, value ]
+// ::= .insn [ format encoding, (operand (, operand)*) ]
+bool ToyAsmParser::parseDirectiveInsn(SMLoc NameLoc) {
+  MCAsmParser &Parser = getParser();
+
+  StringRef Format;
+  SMLoc ErrorLoc = Parser.getTok().getLoc();
+  if (Parser.parseIdentifier(Format)) {
+    // .insn [ value ]
+    int64_t Value;
+    if (Parser.parseAbsoluteExpression(Value))
+      return true;
+    if (Parser.parseOptionalToken(AsmToken::Comma)) {
+      // .insn [ length, value ]
+      int64_t Length = Value;
+      if (Length != 4)
+        return Error(ErrorLoc, "instruction lengths must be 4");
+      if (Parser.parseAbsoluteExpression(Value))
+        return true;
+    }
+
+    if (!isUIntN(32, Value))
+      return Error(ErrorLoc, "encoding value does not fit into instruction");
+
+    Parser.getStreamer().emitInstruction(MCInstBuilder(Toy::Insn).addImm(Value),
+                                         getSTI());
+    return false;
+  }
+
+  bool IsValid = StringSwitch<bool>(Format)
+                     .Cases({"r", "i", "s", "b", "u", "j"}, true)
+                     .Default(false);
+  if (!IsValid)
+    return Error(ErrorLoc, "invalid insn instruction foramt");
+
+  std::string FormatName = (".insn_" + Format).str();
+
+  ParseInstructionInfo Info;
+  SmallVector<std::unique_ptr<MCParsedAsmOperand>> Operands;
+  if (parseInstruction(Info, FormatName, NameLoc, Operands))
+    return true;
+
+  unsigned Opcode;
+  uint64_t ErrorInfo;
+  return matchAndEmitInstruction(NameLoc, Opcode, Operands,
+                                 Parser.getStreamer(), ErrorInfo, false);
 }
 
 bool ToyAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -299,12 +368,18 @@ bool ToyAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
 }
 
-bool ToyAsmParser::parseOperand(OperandVector &Operands) {
+bool ToyAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
+  ParseStatus Result = MatchOperandParserImpl(Operands, Mnemonic);
+  if (Result.isSuccess())
+    return false;
+  if (Result.isFailure())
+    return true;
+
   // parse register
   if (parseRegister(Operands).isSuccess())
     return false;
 
-  // parse expression, now this is an immedidate
+  // parse expression, now this is an immediate
   if (parseExpression(Operands).isSuccess()) {
     // immediate may be followed by '(' + register + ')'
     if (getLexer().getTok().is(AsmToken::LParen))
@@ -416,6 +491,51 @@ ParseStatus ToyAsmParser::parseFenceArg(OperandVector &Operands) {
 ParseFail:
   return TokError("operand must be formed of letters selected in-order from "
                   "'iorw' or be 0");
+}
+
+ParseStatus ToyAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
+  SMLoc S = getLoc(), E;
+  const MCExpr *Expr;
+  switch (getLexer().getKind()) {
+  default:
+    return ParseStatus::NoMatch;
+  case AsmToken::Integer:
+    if (getParser().parseExpression(Expr, E))
+      return ParseStatus::Failure;
+
+    if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr)) {
+      int64_t Imm = CE->getValue();
+      if (isUInt<7>(Imm)) {
+        Operands.push_back(ToyOperand::createExpr(Expr, isToy64(), S, E));
+        return ParseStatus::Success;
+      }
+    }
+    break;
+  case AsmToken::Identifier: {
+    StringRef Name;
+    if (getParser().parseIdentifier(Name))
+      return ParseStatus::Failure;
+
+    const ToyInsnOpcode::ToyOpcode *Opcode =
+        ToyInsnOpcode::lookupToyOpcodeByName(Name);
+    if (Opcode && isUInt<7>(Opcode->Value)) {
+      const MCExpr *Expr = MCConstantExpr::create(Opcode->Value, getContext());
+      E = SMLoc::getFromPointer(S.getPointer() + Name.size());
+      Operands.push_back(ToyOperand::createExpr(Expr, isToy64(), S, E));
+      return ParseStatus::Success;
+    }
+  }
+  }
+
+  return generateImmOutOfRangeError(
+      S, 0, (1 << 7) - 1,
+      "opcode must be a valid opcode or an immediate in the range");
+}
+
+bool ToyAsmParser::generateImmOutOfRangeError(
+    SMLoc ErrorLoc, int64_t Lower, int64_t Upper,
+    const Twine &Msg = "immediate must be an integer in the range") {
+  return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
 }
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeToyAsmParser() {
