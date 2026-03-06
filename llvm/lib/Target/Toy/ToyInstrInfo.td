@@ -32,12 +32,18 @@ class ImmOperand<string prefix, int width, string suffix = ""> : ToyOperand {
 }
 
 class SImmOperand<int width, string suffix = "">
-    : ImmOperand<"S", width, suffix>;
+    : ImmOperand<"S", width, suffix> {
+  let DecoderMethod = "decodeSImmOperand<" # width # ">";
+}
 class UImmOperand<int width, string suffix = "">
     : ImmOperand<"U", width, suffix>;
 class SImmOperandLsb0<int width> : SImmOperand<width, "Lsb0"> {
   let EncoderMethod = "getImmOpValueAsrN<1>";
-  // let DecoderMethod = "decodeSImmOperandAndLslN<" # width # ", 1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<" # width # ", 1>";
+
+  // OPERAND_PCREL add an extra operand Address
+  let OperandType = "OPERAND_PCREL";
+  let PrintMethod = "printBranchOperand";
 }
 
 def simm12       : SImmOperand<12>;
@@ -67,7 +73,7 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
                  (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm), opcodestr,
                  "$rs1, $rs2, $imm"> {
   // I copied this from the RISCV backend, but I don't know what it's used for yet
-  // let isBranch       = 1;
+  let isBranch       = 1;
   // let isTerminator   = 1;
   let hasSideEffects = 0;
   let mayLoad        = 0;

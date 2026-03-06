@@ -1141,6 +1141,8 @@ PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
     return AArch64PrettyPrinterInst;
   case Triple::riscv32:
   case Triple::riscv64:
+  case Triple::toy32:
+  case Triple::toy64:
     return RISCVPrettyPrinterInst;
   }
 }

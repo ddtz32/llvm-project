@@ -1,7 +1,9 @@
 #include "ToyInstPrinter.h"
 #include "ToyMCTargetDesc.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CommandLine.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -46,12 +48,12 @@ const char *ToyInstPrinter::getRegisterName(MCRegister Reg) {
 void ToyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                StringRef Annot, const MCSubtargetInfo &STI,
                                raw_ostream &OS) {
-  printInstruction(MI, Address, OS);
+  printInstruction(MI, Address, STI, OS);
   printAnnotation(OS, Annot);
 }
 
 void ToyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                  raw_ostream &OS) {
+                                  const MCSubtargetInfo &STI, raw_ostream &OS) {
   const MCOperand &MO = MI->getOperand(OpNo);
   if (MO.isReg())
     return printRegName(OS, MO.getReg());
@@ -66,4 +68,19 @@ void ToyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 
 void ToyInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << getRegisterName(Reg);
+}
+
+void ToyInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
+                                        unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  if (PrintBranchImmAsAddress) {
+    uint64_t Target = Address + MO.getImm();
+    if (!STI.hasFeature(Toy::Feature64Bit))
+      Target &= 0xffffffff;
+    markup(O, Markup::Target) << formatHex(Target);
+  } else
+    markup(O, Markup::Target) << formatImm(MO.getImm());
 }

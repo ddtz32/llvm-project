@@ -17,7 +17,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include <cstdint>
-#include <optional>
 
 using namespace llvm;
 

@@ -8,10 +8,10 @@ class DirectiveInsn<string format, dag outs, dag ins, string argstr>
   let Inst{6-0}      = opcode;
 
   let AsmString      = !strconcat(".insn ", format, " ", argstr);
-  let isCodeGenOnly  = true;
-  let hasSideEffects = false;
-  let mayLoad        = false;
-  let mayStore       = false;
+  let isCodeGenOnly  = 1;
+  let hasSideEffects = 0;
+  let mayLoad        = 0;
+  let mayStore       = 0;
 }
 
 class DirectiveInsnR<dag outs, dag ins, string argstr>
@@ -103,10 +103,10 @@ def Insn : ToyInst<(outs), (ins uimm32:$value), "", ""> {
   let Inst           = value;
 
   let AsmString      = ".insn 0x4, $value";
-  let isCodeGenOnly  = true;
-  let hasSideEffects = true;
-  let mayLoad        = true;
-  let mayStore       = true;
+  let isCodeGenOnly  = 1;
+  let hasSideEffects = 1;
+  let mayLoad        = 1;
+  let mayStore       = 1;
 }
 
 def InsnR : DirectiveInsnR<(outs GPR:$rd), (ins uimm7_opcode:$opcode,

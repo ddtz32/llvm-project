@@ -1,5 +1,7 @@
 add_llvm_component_library(LLVMToyDesc
+  ToyAsmBackend.cpp
   ToyBaseInfo.cpp
+  ToyELFObjectWriter.cpp
   ToyInstPrinter.cpp
   ToyMCCodeEmitter.cpp
   ToyMCTargetDesc.cpp

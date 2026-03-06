@@ -9,6 +9,7 @@ tablegen(LLVM ToyGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM ToyGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM ToyGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM ToyGenSearchableTables.inc -gen-searchable-tables)
+tablegen(LLVM ToyGenDisassembler.inc -gen-disassembler)
 
 add_public_tablegen_target(ToyCommonTableGen)
 
@@ -28,5 +29,6 @@ add_llvm_target(ToyCodeGen
   )
 
 add_subdirectory(AsmParser)
+add_subdirectory(Disassembler)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)

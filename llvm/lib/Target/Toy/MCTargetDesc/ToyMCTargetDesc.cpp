@@ -2,10 +2,12 @@
 #include "TargetInfo/ToyTargetInfo.h"
 #include "ToyInstPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include <cstdint>
 
 #define GET_REGINFO_MC_DESC
 #include "ToyGenRegisterInfo.inc"
@@ -55,6 +57,43 @@ static MCInstPrinter *createToyMCInstPrinter(const Triple &T,
   return new ToyInstPrinter(MAI, MII, MRI);
 }
 
+namespace {
+class ToyInstrAnalysis : public MCInstrAnalysis {
+public:
+  ToyInstrAnalysis(const MCInstrInfo *Info) : MCInstrAnalysis(Info) {}
+
+  /// Given a branch instruction try to get the address the branch
+  /// targets. Return true on success, and the address in Target.
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override;
+};
+} // namespace
+
+bool ToyInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
+                                      uint64_t Size, uint64_t &Target) const {
+  if (isConditionalBranch(Inst)) {
+    if (Size != 4)
+      return false;
+    Target = Addr + Inst.getOperand(2).getImm();
+    return true;
+  }
+
+  switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case Toy::JAL:
+      Target = Addr + Inst.getOperand(1).getImm();
+      return true;
+    case Toy::JALR:
+      // TODO: Not understand
+      return false;
+  }
+}
+
+static MCInstrAnalysis *createToyInstrAnalysis(const MCInstrInfo *Info) {
+  return new ToyInstrAnalysis(Info);
+}
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeToyTargetMC() {
   for (Target *T : {&getTheToy32Target(), &getTheToy64Target()}) {
     TargetRegistry::RegisterMCRegInfo(*T, createToyMCRegisterInfo);
@@ -63,5 +102,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeToyTargetMC() {
     TargetRegistry::RegisterMCAsmInfo(*T, createToyMCAsmInfo);
     TargetRegistry::RegisterMCInstPrinter(*T, createToyMCInstPrinter);
     TargetRegistry::RegisterMCCodeEmitter(*T, createToyMCCodeEmitter);
+    TargetRegistry::RegisterMCAsmBackend(*T, createToyAsmBackend);
+    TargetRegistry::RegisterMCInstrAnalysis(*T, createToyInstrAnalysis);
   }
 }
