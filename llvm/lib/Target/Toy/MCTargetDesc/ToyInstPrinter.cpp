@@ -1,5 +1,6 @@
 #include "ToyInstPrinter.h"
 #include "ToyMCTargetDesc.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CommandLine.h"
@@ -63,7 +64,8 @@ void ToyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     return;
   }
 
-  llvm_unreachable("TODO");
+  assert(MO.isExpr() && "Unknown operand kind in printOperand");
+  MAI.printExpr(OS, *MO.getExpr());
 }
 
 void ToyInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {

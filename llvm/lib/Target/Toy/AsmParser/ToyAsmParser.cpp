@@ -1,8 +1,10 @@
 #include "MCTargetDesc/ToyBaseInfo.h"
 #include "MCTargetDesc/ToyInstPrinter.h"
+#include "MCTargetDesc/ToyMCAsmInfo.h"
 #include "MCTargetDesc/ToyMCTargetDesc.h"
 #include "TargetInfo/ToyTargetInfo.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCExpr.h"
@@ -12,6 +14,7 @@
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
@@ -51,6 +54,7 @@ public:
   ParseStatus parseMemOpBaseRegister(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
   ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
+  ParseStatus parseOperandWithSpecifier(OperandVector &Operands);
 
   bool generateImmOutOfRangeError(SMLoc ErrorLoc, int64_t Lower, int64_t Upper,
                                   const Twine &Msg);
@@ -104,6 +108,19 @@ struct ToyOperand final : public MCParsedAsmOperand {
     return false;
   }
 
+  static bool classsifySymbolRef(const MCExpr *Expr, Toy::Specifier &Kind) {
+    Kind = ELF::R_TOY_NONE;
+    if (const MCSpecifierExpr *SE = dyn_cast<MCSpecifierExpr>(Expr)) {
+      Kind = SE->getSpecifier();
+      Expr = SE->getSubExpr();
+    }
+
+    MCValue Res;
+    if (Expr->evaluateAsRelocatable(Res, nullptr))
+      return Res.getSpecifier() == ELF::R_TOY_NONE;
+    return false;
+  }
+
   static int64_t fixImmediateForToy32(int64_t Imm, bool IsToy64Imm) {
     if (!IsToy64Imm && isUInt<32>(Imm))
       return SignExtend64<32>(Imm);
@@ -136,6 +153,15 @@ struct ToyOperand final : public MCParsedAsmOperand {
     int64_t Imm;
     bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
     return IsConstant && isUInt<N>(fixImmediateForToy32(Imm, isToy64Expr()));
+  }
+
+  bool isUImm20AUIPC() const {
+    if (isUImm<20>())
+      return true;
+
+    Toy::Specifier Kind;
+    return isExpr() && classsifySymbolRef(getExpr(), Kind) &&
+           Kind == ELF::R_TOY_PCREL_HI20;
   }
 
   StringRef getToken() const {
@@ -396,10 +422,13 @@ ParseStatus ToyAsmParser::parseExpression(OperandVector &Operands) {
   switch (getLexer().getTok().getKind()) {
   default:
     return ParseStatus::NoMatch;
+  case AsmToken::Minus:
   case AsmToken::Integer:
     if (getParser().parseExpression(Expr, E))
       return ParseStatus::Failure;
     break;
+  case AsmToken::Percent:
+    return parseOperandWithSpecifier(Operands);
   }
 
   Operands.push_back(ToyOperand::createExpr(Expr, isToy64(), S, E));
@@ -529,6 +558,32 @@ ParseStatus ToyAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
   return generateImmOutOfRangeError(
       S, 0, (1 << 7) - 1,
       "opcode must be a valid opcode or an immediate in the range");
+}
+
+ParseStatus ToyAsmParser::parseOperandWithSpecifier(OperandVector &Operands) {
+  SMLoc S = getLoc(), E;
+
+  if (parseToken(AsmToken::Percent, "expected '%' relocation sepcifier"))
+    return ParseStatus::Failure;
+
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return TokError("expected '%' relocation sepcifier");
+  StringRef Identifier = getParser().getTok().getIdentifier();
+  Toy::Specifier Spec = Toy::parseSpeciferName(Identifier);
+  if (!Spec)
+    return TokError("invalid relocation sepcifier");
+
+  getParser().Lex(); // Eat the identifier
+  if (parseToken(AsmToken::LParen, "expected '('"))
+    return ParseStatus::Failure;
+
+  const MCExpr *SubExpr;
+  if (getParser().parseParenExpression(SubExpr, E))
+    return ParseStatus::Failure;
+
+  const MCExpr *Expr = MCSpecifierExpr::create(SubExpr, Spec, getContext(), S);
+  Operands.push_back(ToyOperand::createExpr(Expr, isToy64(), S, E));
+  return ParseStatus::Success;
 }
 
 bool ToyAsmParser::generateImmOutOfRangeError(

@@ -1,7 +1,7 @@
 #include "ToyMCTargetDesc.h"
 #include "TargetInfo/ToyTargetInfo.h"
 #include "ToyInstPrinter.h"
-#include "llvm/MC/MCAsmInfo.h"
+#include "ToyMCAsmInfo.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -45,7 +45,7 @@ static MCSubtargetInfo *createToyMCSubtargetInfo(const Triple &TT,
 static MCAsmInfo *createToyMCAsmInfo(const MCRegisterInfo &MRI,
                                      const Triple &TT,
                                      const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new MCAsmInfo();
+  MCAsmInfo *MAI = new ToyMCAsmInfo();
   return MAI;
 }
 
@@ -79,14 +79,14 @@ bool ToyInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
   }
 
   switch (Inst.getOpcode()) {
-    default:
-      return false;
-    case Toy::JAL:
-      Target = Addr + Inst.getOperand(1).getImm();
-      return true;
-    case Toy::JALR:
-      // TODO: Not understand
-      return false;
+  default:
+    return false;
+  case Toy::JAL:
+    Target = Addr + Inst.getOperand(1).getImm();
+    return true;
+  case Toy::JALR:
+    // TODO: Not understand
+    return false;
   }
 }
 

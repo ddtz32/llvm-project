@@ -1,0 +1,9 @@
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+ELF_RELOC(R_TOY_NONE,               0)
+ELF_RELOC(R_TOY_LO12,               1)
+ELF_RELOC(R_TOY_HI20,               2)
+ELF_RELOC(R_TOY_PCREL_LO12,         3)
+ELF_RELOC(R_TOY_PCREL_HI20,         4)

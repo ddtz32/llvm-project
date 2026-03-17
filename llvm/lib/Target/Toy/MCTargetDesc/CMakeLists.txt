@@ -3,7 +3,9 @@ add_llvm_component_library(LLVMToyDesc
   ToyBaseInfo.cpp
   ToyELFObjectWriter.cpp
   ToyInstPrinter.cpp
+  ToyMCAsmInfo.cpp
   ToyMCCodeEmitter.cpp
+  ToyMCExpr.cpp
   ToyMCTargetDesc.cpp
 
   LINK_COMPONENTS

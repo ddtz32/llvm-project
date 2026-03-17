@@ -9,6 +9,17 @@
 # RUN:     | llvm-objdump --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
 
+# RUN: llvm-mc %s -triple=toy32 -M no-aliases \
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST,CHECK-ASM-NOALIAS %s
+# RUN: llvm-mc %s -triple=toy32 \
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS,CHECK-ASM %s
+# RUN: llvm-mc -filetype=obj -triple toy32 < %s \
+# RUN:     | llvm-objdump -M no-aliases --no-print-imm-hex -d -r - \
+# RUN:     | FileCheck -check-prefixes=CHECK-OBJ-NOALIAS,CHECK-EXPAND,CHECK-INST %s
+# RUN: llvm-mc -filetype=obj -triple toy32 < %s \
+# RUN:     | llvm-objdump --no-print-imm-hex -d -r - \
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
+
 # The following check prefixes are used in this test:
 # CHECK-INST.....Match the canonical instr (tests alias to instr. mapping)
 # CHECK-ALIAS....Match the alias (tests instr. to alias mapping)

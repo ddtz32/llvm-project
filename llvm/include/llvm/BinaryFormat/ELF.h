@@ -727,6 +727,10 @@ enum {
 };
 
 enum {
+#include "ELFRelocs/Toy.def"
+};
+
+enum {
   // Symbol may follow different calling convention than the standard calling
   // convention.
   STO_RISCV_VARIANT_CC = 0x80

@@ -22,6 +22,10 @@ def InsnDirectiveOpcodeAsmOperand : ImmAsmOperand<"U", 7> {
   let ParserMethod = "parseInsnDirectiveOpcode";
 }
 
+def AUIPCAsmOperand : ImmAsmOperand<"U", 20, "AUIPC"> {
+  let PredicateMethod = "isUImm20AUIPC";
+}
+
 //===----------------------------------------------------------------------===//
 // Operand
 //===----------------------------------------------------------------------===//
@@ -57,6 +61,9 @@ def uimm7_opcode : UImmOperand<7> {
   let ParserMatchClass = InsnDirectiveOpcodeAsmOperand;
 }
 def uimm20       : UImmOperand<20>;
+def uimm20_auipc : UImmOperand<20> {
+  let ParserMatchClass = AUIPCAsmOperand;
+}
 def uimm32       : UImmOperand<32>;
 
 def fencearg     : ToyOperand {
@@ -112,8 +119,8 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def LUI   : ToyFormatU<OPC_LUI, (outs GPR:$rd), (ins uimm20:$imm),"lui",
                          "$rd, $imm">;
 
-  def AUIPC : ToyFormatU<OPC_AUPIC, (outs GPR:$rd), (ins uimm20:$imm), "auipc",
-                         "$rd, $imm">;
+  def AUIPC : ToyFormatU<OPC_AUPIC, (outs GPR:$rd), (ins uimm20_auipc:$imm),
+                        "auipc", "$rd, $imm">;
 
   def JAL   : ToyFormatJ<OPC_JAL, (outs GPR:$rd), (ins simm21_lsb0:$imm), "jal",
                          "$rd, $imm">;
