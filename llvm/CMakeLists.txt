@@ -846,7 +846,8 @@ option(LLVM_BUILD_RUNTIME
   "Build the LLVM runtime libraries." ON)
 option(LLVM_BUILD_EXAMPLES
   "Build the LLVM example programs. If OFF, just generate build targets." OFF)
-option(LLVM_INCLUDE_EXAMPLES "Generate build targets for the LLVM examples" ON)
+# mlir examples already have a toy target, which has the same name of my toy backend
+option(LLVM_INCLUDE_EXAMPLES "Generate build targets for the LLVM examples" OFF)
 
 option(LLVM_BUILD_TESTS
   "Build LLVM unit tests. If OFF, just generate build targets." OFF)
