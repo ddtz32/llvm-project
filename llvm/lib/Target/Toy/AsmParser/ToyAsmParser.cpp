@@ -2,6 +2,7 @@
 #include "MCTargetDesc/ToyInstPrinter.h"
 #include "MCTargetDesc/ToyMCAsmInfo.h"
 #include "MCTargetDesc/ToyMCTargetDesc.h"
+#include "MCTargetDesc/ToyMatInt.h"
 #include "TargetInfo/ToyTargetInfo.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -12,6 +13,7 @@
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -48,6 +50,10 @@ public:
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
+  bool processInstruction(MCInst &Inst, MCStreamer &Out);
+  void emitToStreamer(MCInst &Inst, MCStreamer &Out);
+  void emitLoadImm(MCRegister Reg, int64_t Imm, MCStreamer &Out);
+
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
   ParseStatus parseExpression(OperandVector &Operands);
   ParseStatus parseRegister(OperandVector &Operands);
@@ -63,6 +69,12 @@ public:
 #include "ToyGenAsmMatcher.inc"
 #undef GET_ASSEMBLER_HEADER
 };
+
+int64_t fixImmediateForToy32(int64_t Imm, bool IsToy64Imm) {
+  if (!IsToy64Imm && isUInt<32>(Imm))
+    return SignExtend64<32>(Imm);
+  return Imm;
+}
 
 struct ToyOperand final : public MCParsedAsmOperand {
 
@@ -121,10 +133,13 @@ struct ToyOperand final : public MCParsedAsmOperand {
     return false;
   }
 
-  static int64_t fixImmediateForToy32(int64_t Imm, bool IsToy64Imm) {
-    if (!IsToy64Imm && isUInt<32>(Imm))
-      return SignExtend64<32>(Imm);
-    return Imm;
+  static bool isSymbolDiff(const MCExpr *Expr) {
+    MCValue Res;
+    if (Expr->evaluateAsRelocatable(Res, nullptr)) {
+      return Res.getSpecifier() == ELF::R_TOY_NONE && Res.getAddSym() &&
+             Res.getSubSym();
+    }
+    return false;
   }
 
   template <unsigned N> bool isSImm() const {
@@ -155,6 +170,15 @@ struct ToyOperand final : public MCParsedAsmOperand {
     return IsConstant && isUInt<N>(fixImmediateForToy32(Imm, isToy64Expr()));
   }
 
+  bool isSImm12LO() const {
+    if (isSImm<12>())
+      return true;
+
+    Toy::Specifier Kind;
+    return isExpr() && classsifySymbolRef(getExpr(), Kind) &&
+           (Kind == ELF::R_TOY_LO12 || Kind == ELF::R_TOY_PCREL_LO12);
+  }
+
   bool isUImm20AUIPC() const {
     if (isUImm<20>())
       return true;
@@ -162,6 +186,17 @@ struct ToyOperand final : public MCParsedAsmOperand {
     Toy::Specifier Kind;
     return isExpr() && classsifySymbolRef(getExpr(), Kind) &&
            Kind == ELF::R_TOY_PCREL_HI20;
+  }
+
+  bool isImm32LI() const {
+    if (!isExpr())
+      return false;
+
+    int64_t Imm;
+    if (evaluateConstantExpr(getExpr(), Imm))
+      // The immediate here can be 32 or 64 bit
+      return isToy64Expr() || isInt<32>(Imm) || isUInt<32>(Imm);
+    return isSymbolDiff(getExpr());
   }
 
   StringRef getToken() const {
@@ -388,9 +423,45 @@ bool ToyAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   default:
     llvm_unreachable("TODO");
   case Match_Success:
-    Out.emitInstruction(Inst, getSTI());
+    return processInstruction(Inst, Out);
+  }
+}
+
+bool ToyAsmParser::processInstruction(MCInst &Inst, MCStreamer &Out) {
+  switch (Inst.getOpcode()) {
+  default:
+    break;
+  case Toy::PsdudoLI: {
+    MCRegister Reg = Inst.getOperand(0).getReg();
+    const MCOperand &Op1 = Inst.getOperand(1);
+    assert((Op1.isExpr() || Op1.isImm()) &&
+           "li only support expression or immediate");
+    if (Op1.isExpr()) {
+      // 这里的表达式一定 12 bit 一定能表示?
+      emitToStreamer(
+          MCInstBuilder(Toy::ADDI).addReg(Reg).addReg(Toy::X0).addExpr(
+              Op1.getExpr()),
+          Out);
+      return false;
+    }
+    int64_t Imm = fixImmediateForToy32(Op1.getImm(), isToy64());
+    emitLoadImm(Reg, Imm, Out);
     return false;
   }
+  }
+  emitToStreamer(Inst, Out);
+  return false;
+}
+
+void ToyAsmParser::emitToStreamer(MCInst &Inst, MCStreamer &Out) {
+  Out.emitInstruction(Inst, getSTI());
+}
+
+void ToyAsmParser::emitLoadImm(MCRegister Reg, int64_t Imm, MCStreamer &Out) {
+  SmallVector<MCInst, 8> Seq;
+  ToyMatInt::generateMCInstSeq(Imm, getSTI(), Reg, Seq);
+  for (auto &Inst : Seq)
+    emitToStreamer(Inst, Out);
 }
 
 bool ToyAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
@@ -424,6 +495,7 @@ ParseStatus ToyAsmParser::parseExpression(OperandVector &Operands) {
     return ParseStatus::NoMatch;
   case AsmToken::Minus:
   case AsmToken::Integer:
+  case AsmToken::Identifier:
     if (getParser().parseExpression(Expr, E))
       return ParseStatus::Failure;
     break;

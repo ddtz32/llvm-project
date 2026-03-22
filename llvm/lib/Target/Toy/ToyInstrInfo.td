@@ -1,13 +1,19 @@
 //===----------------------------------------------------------------------===//
 // Asm Operand
 //===----------------------------------------------------------------------===//
-class ImmAsmOperand<string prefix, int width, string suffix = "">
+class ImmAsmOperandBase<string prefix, int width, string suffix = "">
     : AsmOperandClass {
   let Name = !strconcat(prefix, "Imm", !cast<string>(width), suffix);
-  let PredicateMethod = !strconcat("is", prefix, "Imm", suffix,
-                                  "<", !cast<string>(width), ">");
+  let PredicateMethod = !strconcat("is", prefix, "Imm", !cast<string>(width),
+                                   suffix);
   let RenderMethod = "addImmOperands";
   // ParserMethod default to parseOperand
+}
+
+class ImmAsmOperand<string prefix, int width, string suffix = "">
+    : ImmAsmOperandBase<prefix, width, suffix> {
+  let PredicateMethod = !strconcat("is", prefix, "Imm", suffix, "<",
+                                   !cast<string>(width), ">");
 }
 
 def FenceArgAsmOperand : AsmOperandClass {
@@ -22,14 +28,15 @@ def InsnDirectiveOpcodeAsmOperand : ImmAsmOperand<"U", 7> {
   let ParserMethod = "parseInsnDirectiveOpcode";
 }
 
-def AUIPCAsmOperand : ImmAsmOperand<"U", 20, "AUIPC"> {
-  let PredicateMethod = "isUImm20AUIPC";
-}
-
 //===----------------------------------------------------------------------===//
 // Operand
 //===----------------------------------------------------------------------===//
 class ToyOperand : Operand<i32>;
+
+class ImmOperandBase<string prefix, int width, string suffix = "">
+    : ToyOperand {
+  let ParserMatchClass = ImmAsmOperandBase<prefix, width, suffix>;
+}
 
 class ImmOperand<string prefix, int width, string suffix = ""> : ToyOperand {
   let ParserMatchClass = ImmAsmOperand<prefix, width, suffix>;
@@ -51,6 +58,7 @@ class SImmOperandLsb0<int width> : SImmOperand<width, "Lsb0"> {
 }
 
 def simm12       : SImmOperand<12>;
+def simm12_lo    : ImmOperandBase<"S", 12, "LO">;
 def simm13_lsb0  : SImmOperandLsb0<13>;
 def simm21_lsb0  : SImmOperandLsb0<21>;
 
@@ -61,10 +69,10 @@ def uimm7_opcode : UImmOperand<7> {
   let ParserMatchClass = InsnDirectiveOpcodeAsmOperand;
 }
 def uimm20       : UImmOperand<20>;
-def uimm20_auipc : UImmOperand<20> {
-  let ParserMatchClass = AUIPCAsmOperand;
-}
+def uimm20_auipc : ImmOperandBase<"U", 20, "AUIPC">;
 def uimm32       : UImmOperand<32>;
+
+def imm32_li     : ImmOperandBase<"", 32, "LI">;
 
 def fencearg     : ToyOperand {
   let ParserMatchClass = FenceArgAsmOperand;
@@ -79,7 +87,7 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
     : ToyFormatB<funct3, OPC_BRANCH, (outs),
                  (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm), opcodestr,
                  "$rs1, $rs2, $imm"> {
-  // I copied this from the RISCV backend, but I don't know what it's used for yet
+  // copy this from the RISCV backend, but I don't know what it's used for yet
   let isBranch       = 1;
   // let isTerminator   = 1;
   let hasSideEffects = 0;

@@ -1,8 +1,18 @@
 // RISV-V pseudo instructions
+class Pseudo<dag outs, dag ins, string opcodestr, string argstr>
+    : ToyInst<outs, ins, opcodestr, argstr> {
+  let isPseudo = 1;
+}
+
 // TODO: Load and store address
 def : InstAlias<"nop",          (ADDI X0,      X0,      0)>;
 // TODO: imm exceeding 12 bits
-def : InstAlias<"li $rd, $imm", (ADDI GPR:$rd, X0,      simm12:$imm)>;
+def : InstAlias<"li $rd, $imm", (ADDI GPR:$rd, X0,      simm12_lo:$imm)>;
+
+// PsdudoLI may be mapped to lui+addi, so Size is 8
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in
+def PsdudoLI : Pseudo<(outs GPR:$rd), (ins imm32_li:$imm), "li", "$rd, $imm">;
+
 def : InstAlias<"mv $rd, $rs",  (ADDI GPR:$rd, GPR:$rs, 0)>;
 
 def : InstAlias<"not $rd, $rs", (XORI GPR:$rd, GPR:$rs, -1)>;

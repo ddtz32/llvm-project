@@ -15,6 +15,8 @@ def ToyInstrInfo : InstrInfo {
 
 def ToyAsmParser : AsmParser {
   let ShouldEmitMatchRegisterAltName = 1;
+  // 决定了指令在 asm match table 中的顺序
+  let PreferSmallerInstructions = 1;
 }
 
 def ToyAsmParserVariant : AsmParserVariant {
