@@ -72,6 +72,7 @@ def uimm20       : UImmOperand<20>;
 def uimm20_auipc : ImmOperandBase<"U", 20, "AUIPC">;
 def uimm32       : UImmOperand<32>;
 
+def imm32_la     : ImmOperandBase<"", 32, "LA">;
 def imm32_li     : ImmOperandBase<"", 32, "LI">;
 
 def fencearg     : ToyOperand {

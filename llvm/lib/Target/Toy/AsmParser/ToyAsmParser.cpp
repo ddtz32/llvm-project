@@ -189,14 +189,19 @@ struct ToyOperand final : public MCParsedAsmOperand {
   }
 
   bool isImm32LI() const {
+    if (isImm32LA())
+      return true;
+    return isExpr() && isSymbolDiff(getExpr());
+  }
+
+  bool isImm32LA() const {
     if (!isExpr())
       return false;
 
     int64_t Imm;
-    if (evaluateConstantExpr(getExpr(), Imm))
-      // The immediate here can be 32 or 64 bit
-      return isToy64Expr() || isInt<32>(Imm) || isUInt<32>(Imm);
-    return isSymbolDiff(getExpr());
+    bool IsConstant = evaluateConstantExpr(getExpr(), Imm);
+    // The immediate here can be 32 or 64 bit
+    return IsConstant || (isToy64Expr() || isInt<32>(Imm) || isUInt<32>(Imm));
   }
 
   StringRef getToken() const {
@@ -431,13 +436,15 @@ bool ToyAsmParser::processInstruction(MCInst &Inst, MCStreamer &Out) {
   switch (Inst.getOpcode()) {
   default:
     break;
-  case Toy::PsdudoLI: {
+  case Toy::PsdudoLI:
+  case Toy::PsdudoLAImm:
+  case Toy::PsdudoLLAImm: {
     MCRegister Reg = Inst.getOperand(0).getReg();
     const MCOperand &Op1 = Inst.getOperand(1);
     assert((Op1.isExpr() || Op1.isImm()) &&
            "li only support expression or immediate");
     if (Op1.isExpr()) {
-      // 这里的表达式一定 12 bit 一定能表示?
+      // 这里的表达式 12 bit 一定能表示?
       emitToStreamer(
           MCInstBuilder(Toy::ADDI).addReg(Reg).addReg(Toy::X0).addExpr(
               Op1.getExpr()),

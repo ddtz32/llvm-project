@@ -25,16 +25,20 @@ static void generateInstSeqImpl(int64_t Imm, const MCSubtargetInfo &STI,
                                 InstSeq &Seq) {
   // bool IsToy64 = STI.hasFeature(Toy::Feature64Bit);
 
+  // Imm == 0                            : ADDI
+  // Imm[0, 12) != 0 && Imm[12, 32) == 0 : ADDI
+  // Imm[0, 12) == 0 && Imm[12, 32) != 0 : LUI
+  // Imm[0, 32) != 0                     : LUI + ADDI
+
   int64_t Hi20 = ((Imm + 0x800) >> 12) & 0xFFFFF;
   int64_t Lo12 = SignExtend64<12>(Imm);
   if (Hi20)
     Seq.emplace_back(Toy::LUI, Hi20);
-  if (Lo12)
+  if (Lo12 || !Hi20)
     Seq.emplace_back(Toy::ADDI, Lo12);
 }
 
 InstSeq ToyMatInt::generateInstSeq(int64_t Imm, const MCSubtargetInfo &STI) {
-  assert(!isInt<12>(Imm) && "simm12 should be match to li simm12");
   assert(isInt<32>(Imm) && "Toy32 only support 32 bit immediate");
 
   InstSeq Seq;

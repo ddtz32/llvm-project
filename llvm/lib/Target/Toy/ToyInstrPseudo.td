@@ -5,6 +5,13 @@ class Pseudo<dag outs, dag ins, string opcodestr, string argstr>
 }
 
 // TODO: Load and store address
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in {
+  def PsdudoLAImm  : Pseudo<(outs GPR:$rd), (ins imm32_la:$imm), "la",
+                            "$rd, $imm">;
+  def PsdudoLLAImm : Pseudo<(outs GPR:$rd), (ins imm32_la:$imm), "lla",
+                            "$rd, $imm">;
+}
+
 def : InstAlias<"nop",          (ADDI X0,      X0,      0)>;
 // TODO: imm exceeding 12 bits
 def : InstAlias<"li $rd, $imm", (ADDI GPR:$rd, X0,      simm12_lo:$imm)>;
