@@ -30,7 +30,9 @@ public:
                     raw_ostream &OS);
   void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printBranchOperand(const MCInst *MI, uint64_t Address, unsigned OpNo,
-                          const MCSubtargetInfo &STI, raw_ostream &O);
+                          const MCSubtargetInfo &STI, raw_ostream &OS);
+  void printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
+                               const MCSubtargetInfo &STI, raw_ostream &OS);
 };
 
 } // namespace llvm

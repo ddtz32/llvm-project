@@ -61,6 +61,7 @@ public:
   ParseStatus parseFenceArg(OperandVector &Operands);
   ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseOperandWithSpecifier(OperandVector &Operands);
+  ParseStatus parseCSRSystemRegister(OperandVector &Operands);
 
   bool generateImmOutOfRangeError(SMLoc ErrorLoc, int64_t Lower, int64_t Upper,
                                   const Twine &Msg);
@@ -83,6 +84,7 @@ struct ToyOperand final : public MCParsedAsmOperand {
     Expression,
     Register,
     Fence,
+    SystemRegister,
   } Kind;
 
   struct ExprOp {
@@ -95,6 +97,7 @@ struct ToyOperand final : public MCParsedAsmOperand {
     ExprOp Expr;
     MCRegister Reg;
     unsigned Fence;
+    const ToySysReg::SysReg *SysReg;
   };
 
   SMLoc StartLoc, EndLoc;
@@ -111,6 +114,7 @@ struct ToyOperand final : public MCParsedAsmOperand {
     return Expr.IsToy64;
   }
   bool isFenceArg() const { return Kind == KindTy::Fence; }
+  bool isCSRSystemRegister() const { return Kind == KindTy::SystemRegister; }
 
   static bool evaluateConstantExpr(const MCExpr *Expr, int64_t &Imm) {
     if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr)) {
@@ -224,6 +228,16 @@ struct ToyOperand final : public MCParsedAsmOperand {
     return Fence;
   }
 
+  StringRef getSysReg() const {
+    assert(isCSRSystemRegister() && "Invalid type access!");
+    return SysReg->Name;
+  }
+
+  unsigned getSysRegEncoding() const {
+    assert(isCSRSystemRegister() && "Invalid type access!");
+    return SysReg->Encoding;
+  }
+
   SMLoc getStartLoc() const override { return StartLoc; }
   SMLoc getEndLoc() const override { return EndLoc; }
 
@@ -240,11 +254,15 @@ struct ToyOperand final : public MCParsedAsmOperand {
       break;
     case KindTy::Register:
       // TODO
-      OS << "<reg: " << (Reg ? ToyInstPrinter::getRegisterName(Reg) : "noreg")
-         << " (" << Reg.id() << ")>";
+      OS << "<reg: "
+         << (getReg() ? ToyInstPrinter::getRegisterName(getReg()) : "noreg")
+         << " (" << getReg().id() << ")>";
       break;
     case KindTy::Fence:
       OS << "<fence: " << getFence() << '>';
+      break;
+    case KindTy::SystemRegister:
+      OS << "<sysreg: " << getSysReg() << " (" << getSysRegEncoding() << ")>";
       break;
     }
   }
@@ -273,6 +291,11 @@ struct ToyOperand final : public MCParsedAsmOperand {
   void addFenceArgOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(getFence()));
+  }
+
+  void addCSRSystemRegisterOperands(MCInst &Inst, unsigned N) {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(SysReg->Encoding));
   }
 
   static std::unique_ptr<ToyOperand> createToken(StringRef Tok, SMLoc L) {
@@ -306,6 +329,15 @@ struct ToyOperand final : public MCParsedAsmOperand {
                                                     SMLoc E) {
     auto Op = std::make_unique<ToyOperand>(KindTy::Fence);
     Op->Fence = Val;
+    Op->StartLoc = S;
+    Op->EndLoc = E;
+    return Op;
+  }
+
+  static std::unique_ptr<ToyOperand> createSysReg(const ToySysReg::SysReg *SysReg, SMLoc S,
+                                                    SMLoc E) {
+    auto Op = std::make_unique<ToyOperand>(KindTy::SystemRegister);
+    Op->SysReg = SysReg;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -663,6 +695,25 @@ ParseStatus ToyAsmParser::parseOperandWithSpecifier(OperandVector &Operands) {
   const MCExpr *Expr = MCSpecifierExpr::create(SubExpr, Spec, getContext(), S);
   Operands.push_back(ToyOperand::createExpr(Expr, isToy64(), S, E));
   return ParseStatus::Success;
+}
+
+ParseStatus ToyAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
+  switch (getLexer().getKind()) {
+  default:
+    return ParseStatus::NoMatch;
+  case AsmToken::Identifier: {
+    StringRef Identifier;
+    if (getParser().parseIdentifier(Identifier))
+      return ParseStatus::Failure;
+
+    const auto *SysReg = ToySysReg::lookupSysRegByName(Identifier);
+    if (SysReg) {
+      Operands.push_back(ToyOperand::createSysReg(SysReg, getLoc(), getEndLoc()));
+      return ParseStatus::Success;
+    }
+    return Error(getLoc(), "invalid csr system register");
+  }
+  }
 }
 
 bool ToyAsmParser::generateImmOutOfRangeError(

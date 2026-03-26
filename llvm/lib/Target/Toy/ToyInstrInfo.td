@@ -19,13 +19,20 @@ class ImmAsmOperand<string prefix, int width, string suffix = "">
 def FenceArgAsmOperand : AsmOperandClass {
   let Name = "FenceArg";
   // PredicateMethod default to isFenceArg
-  let RenderMethod = "addFenceArgOperands";
+  // RenderMethod default to addFenceArgOperands
   let ParserMethod = "parseFenceArg";
 }
 
 def InsnDirectiveOpcodeAsmOperand : ImmAsmOperand<"U", 7> {
   let Name = "InsnDirectiveOpcode";
   let ParserMethod = "parseInsnDirectiveOpcode";
+}
+
+def CSRSystemRegister : AsmOperandClass{
+  let Name = "CSRSystemRegister";
+  // PredicateMethod default to isCSRSystemRegister
+  // RenderMethod default to addCSRSystemRegisterOperands
+  let ParserMethod = "parseCSRSystemRegister";
 }
 
 //===----------------------------------------------------------------------===//
@@ -79,7 +86,13 @@ def fencearg     : ToyOperand {
   let ParserMatchClass = FenceArgAsmOperand;
 }
 
+def csr_sysreg   : ToyOperand{
+  let ParserMatchClass = CSRSystemRegister;
+  let PrintMethod      = "printCSRSystemRegister";
+}
+
 include "ToyInstrFormats.td"
+include "ToySystemOperands.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -121,6 +134,25 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
       : ToyFormatR<funct7, funct3, OPC_OP, (outs GPR:$rd),
                    (ins GPR:$rs1, GPR:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
+  class CSR_ii<bits<3> funct3, string opcodestr>
+      : ToyFormatI<funct3, OPC_SYSTEM, (outs GPR:$rd),
+                   (ins csr_sysreg:$csr, uimm5:$rs1), opcodestr,
+                   "$rd, $csr, $rs1"> {
+  bits<12> csr;
+  let imm = csr;
+}
+
+  class CSR_ir<bits<3> funct3, string opcodestr>
+      : ToyFormatI<funct3, OPC_SYSTEM, (outs GPR:$rd),
+                   (ins csr_sysreg:$csr, GPR:$rs1), opcodestr,
+                   "$rd, $csr, $rs1"> {
+  bits<12> csr;
+  let imm = csr;
+}
+} // hasSideEffects = 1, mayLoad = 0, mayStore = 0
+
 //===----------------------------------------------------------------------===//
 // RV32I/RV64I 
 //===----------------------------------------------------------------------===//
@@ -198,6 +230,14 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 
 // TODO: ECALL, EBREAK
+
+def CSRRW : CSR_ir<0b001, "csrrw">;
+def CSRRS : CSR_ir<0b010, "csrrs">;
+def CSRRC : CSR_ir<0b011, "csrrc">;
+
+def CSRRWI : CSR_ii<0b101, "csrrwi">;
+def CSRRSI : CSR_ii<0b110, "csrrsi">;
+def CSRRCI : CSR_ii<0b111, "csrrci">;
 // ---------------------------------- Pseudo ----------------------------------
 include "ToyInstrPseudo.td"
 include "ToyInstrDirective.td"

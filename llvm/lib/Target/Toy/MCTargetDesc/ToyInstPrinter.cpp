@@ -1,4 +1,5 @@
 #include "ToyInstPrinter.h"
+#include "ToyBaseInfo.h"
 #include "ToyMCTargetDesc.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -75,14 +76,25 @@ void ToyInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
 void ToyInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
                                         unsigned OpNo,
                                         const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
+                                        raw_ostream &OS) {
   const MCOperand &MO = MI->getOperand(OpNo);
 
   if (PrintBranchImmAsAddress) {
     uint64_t Target = Address + MO.getImm();
     if (!STI.hasFeature(Toy::Feature64Bit))
       Target &= 0xffffffff;
-    markup(O, Markup::Target) << formatHex(Target);
+    markup(OS, Markup::Target) << formatHex(Target);
   } else
-    markup(O, Markup::Target) << formatImm(MO.getImm());
+    markup(OS, Markup::Target) << formatImm(MO.getImm());
+}
+
+void ToyInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &OS) {
+  unsigned Encoding = MI->getOperand(OpNo).getImm();
+  const auto *SysReg = ToySysReg::lookupSysRegByEncoding(Encoding);
+  if (SysReg)
+    markup(OS, Markup::Register) << SysReg->Name;
+  else
+    markup(OS, Markup::Register) << formatImm(Encoding);
 }

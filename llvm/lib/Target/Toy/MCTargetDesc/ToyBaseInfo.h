@@ -12,7 +12,6 @@ enum class ToyFenceField {
 };
 
 namespace ToyInsnOpcode {
-
 struct ToyOpcode {
   char Name[10];
   uint8_t Value;
@@ -21,5 +20,22 @@ struct ToyOpcode {
 #define GET_ToyOpcodesList_DECL
 #include "ToyGenSearchableTables.inc"
 } // namespace ToyInsnOpcode
+
+namespace ToySysReg {
+#define GET_SysRegEncodings_DECL
+#include "ToyGenSearchableTables.inc"
+
+struct SysReg {
+  const char Name[10];
+  unsigned Encoding;
+
+  SysRegEncodings getEncoding () const {
+    return static_cast<SysRegEncodings>(Encoding);
+  }
+};
+
+#define GET_SysRegsList_DECL
+#include "ToyGenSearchableTables.inc"
+} // namespace ToySysReg
 
 } // namespace llvm

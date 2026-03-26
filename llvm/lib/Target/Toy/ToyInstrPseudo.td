@@ -60,3 +60,7 @@ def : InstAlias<"ret",          (JALR X1, X1, 0)>;
 
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>;
 def : InstAlias<"pause", (FENCE 0x1, 0x0)>; // 0x1 == w
+
+def : InstAlias<"rdinstreth $rd", (CSRRS GPR:$rd, INSTRETH.Encoding, X0)>;
+def : InstAlias<"rdcycleh $rd",   (CSRRS GPR:$rd, CYCLEH.Encoding,   X0)>;
+def : InstAlias<"rdtimeh $rd",    (CSRRS GPR:$rd, TIMEH.Encoding,    X0)>;
