@@ -334,8 +334,8 @@ struct ToyOperand final : public MCParsedAsmOperand {
     return Op;
   }
 
-  static std::unique_ptr<ToyOperand> createSysReg(const ToySysReg::SysReg *SysReg, SMLoc S,
-                                                    SMLoc E) {
+  static std::unique_ptr<ToyOperand>
+  createSysReg(const ToySysReg::SysReg *SysReg, SMLoc S, SMLoc E) {
     auto Op = std::make_unique<ToyOperand>(KindTy::SystemRegister);
     Op->SysReg = SysReg;
     Op->StartLoc = S;
@@ -521,6 +521,10 @@ bool ToyAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return !parseMemOpBaseRegister(Operands).isSuccess();
     return false;
   }
+
+  // immediate is optional, such as lb x10, (x11)
+  if (getLexer().getTok().is(AsmToken::LParen))
+    return !parseMemOpBaseRegister(Operands).isSuccess();
 
   return true;
 }
@@ -708,7 +712,8 @@ ParseStatus ToyAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
 
     const auto *SysReg = ToySysReg::lookupSysRegByName(Identifier);
     if (SysReg) {
-      Operands.push_back(ToyOperand::createSysReg(SysReg, getLoc(), getEndLoc()));
+      Operands.push_back(
+          ToyOperand::createSysReg(SysReg, getLoc(), getEndLoc()));
       return ParseStatus::Success;
     }
     return Error(getLoc(), "invalid csr system register");

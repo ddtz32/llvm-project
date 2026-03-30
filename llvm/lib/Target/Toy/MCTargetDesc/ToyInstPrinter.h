@@ -32,7 +32,7 @@ public:
   void printBranchOperand(const MCInst *MI, uint64_t Address, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &OS);
   void printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
-                               const MCSubtargetInfo &STI, raw_ostream &OS);
+                              const MCSubtargetInfo &STI, raw_ostream &OS);
 };
 
 } // namespace llvm
