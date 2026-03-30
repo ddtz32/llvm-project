@@ -53,6 +53,8 @@ public:
   bool processInstruction(MCInst &Inst, MCStreamer &Out);
   void emitToStreamer(MCInst &Inst, MCStreamer &Out);
   void emitLoadImm(MCRegister Reg, int64_t Imm, MCStreamer &Out);
+  void emitPseudoExtend(MCInst &Inst, bool SignExtend, unsigned Width,
+                        MCStreamer &Out);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
   ParseStatus parseExpression(OperandVector &Operands);
@@ -467,6 +469,7 @@ bool ToyAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 bool ToyAsmParser::processInstruction(MCInst &Inst, MCStreamer &Out) {
   switch (Inst.getOpcode()) {
   default:
+    emitToStreamer(Inst, Out);
     break;
   case Toy::PsdudoLI:
   case Toy::PsdudoLAImm:
@@ -485,10 +488,18 @@ bool ToyAsmParser::processInstruction(MCInst &Inst, MCStreamer &Out) {
     }
     int64_t Imm = fixImmediateForToy32(Op1.getImm(), isToy64());
     emitLoadImm(Reg, Imm, Out);
-    return false;
+    break;
   }
+  case Toy::PsdudoSEXT_B:
+    emitPseudoExtend(Inst, true, 8, Out);
+    break;
+  case Toy::PsdudoSEXT_H:
+    emitPseudoExtend(Inst, true, 16, Out);
+    break;
+  case Toy::PsdudoZEXT_H:
+    emitPseudoExtend(Inst, false, 16, Out);
+    break;
   }
-  emitToStreamer(Inst, Out);
   return false;
 }
 
@@ -501,6 +512,27 @@ void ToyAsmParser::emitLoadImm(MCRegister Reg, int64_t Imm, MCStreamer &Out) {
   ToyMatInt::generateMCInstSeq(Imm, getSTI(), Reg, Seq);
   for (auto &Inst : Seq)
     emitToStreamer(Inst, Out);
+}
+
+void ToyAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
+                                    unsigned Width, MCStreamer &Out) {
+  const MCOperand &DestReg = Inst.getOperand(0);
+  const MCOperand &SrcReg = Inst.getOperand(1);
+
+  int ShAmt = (isToy64() ? 64 : 32) - Width;
+  assert(ShAmt > 0 && "Shift amount must be non-zero");
+
+  emitToStreamer(
+      MCInstBuilder(Toy::SLLI).addOperand(DestReg).addOperand(SrcReg).addImm(
+          ShAmt),
+      Out);
+
+  unsigned SecondOpcode = SignExtend ? Toy::SRAI : Toy::SRLI;
+  emitToStreamer(MCInstBuilder(SecondOpcode)
+                     .addOperand(DestReg)
+                     .addOperand(DestReg)
+                     .addImm(ShAmt),
+                 Out);
 }
 
 bool ToyAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {

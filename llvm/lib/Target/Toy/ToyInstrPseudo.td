@@ -33,10 +33,16 @@ def : InstAlias<"mv $rd, $rs",  (ADDI GPR:$rd, GPR:$rs, 0)>;
 
 def : InstAlias<"not $rd, $rs", (XORI GPR:$rd, GPR:$rs, -1)>;
 def : InstAlias<"neg $rd, $rs", (SUB  GPR:$rd, X0,      GPR:$rs)>;
-// TODO: negw, sext.b, sext.h, sext.w
+// TODO: negw, sext.w
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in {
+  def PsdudoSEXT_B : Pseudo<(outs GPR:$rd), (ins GPR:$rs), "sext.b", "$rd, $rs">;
+  def PsdudoSEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), "sext.h", "$rd, $rs">;
+  def PsdudoZEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), "zext.h", "$rd, $rs">;
+}
 
 def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
-// TODO: zext.h, zext.w
+// TODO: zext.w
 
 def : InstAlias<"seqz $rd, $rs", (SLTIU GPR:$rd, GPR:$rs, 1)>;
 def : InstAlias<"snez $rd, $rs", (SLTU  GPR:$rd, X0,      GPR:$rs)>;
