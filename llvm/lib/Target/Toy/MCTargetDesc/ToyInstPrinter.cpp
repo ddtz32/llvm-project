@@ -16,6 +16,7 @@ static cl::opt<bool> EmitX8AsFp("toy-emit-x8-as-fp",
 // print ABI name by default, otherwise print register name
 static bool ArchRegNames = false;
 
+#define PRINT_ALIAS_INSTR
 #include "ToyGenAsmWriter.inc"
 
 ToyInstPrinter::ToyInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
@@ -50,7 +51,8 @@ const char *ToyInstPrinter::getRegisterName(MCRegister Reg) {
 void ToyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                StringRef Annot, const MCSubtargetInfo &STI,
                                raw_ostream &OS) {
-  printInstruction(MI, Address, STI, OS);
+  if (!PrintAliases || !printAliasInstr(MI, Address, STI, OS))
+    printInstruction(MI, Address, STI, OS);
   printAnnotation(OS, Annot);
 }
 

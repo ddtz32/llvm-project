@@ -4,13 +4,17 @@
 class ImmAsmOperandBase<string prefix, int width, string suffix = "">
     : AsmOperandClass {
   let Name = !strconcat(prefix, "Imm", !cast<string>(width), suffix);
-  let PredicateMethod = !strconcat("is", prefix, "Imm", !cast<string>(width),
-                                   suffix);
   let RenderMethod = "addImmOperands";
   // ParserMethod default to parseOperand
 }
 
 class ImmAsmOperand<string prefix, int width, string suffix = "">
+    : ImmAsmOperandBase<prefix, width, suffix> {
+  let PredicateMethod = !strconcat("is", prefix, "Imm", !cast<string>(width),
+                                   suffix);
+}
+
+class ImmAsmOperandTemplate<string prefix, int width, string suffix = "">
     : ImmAsmOperandBase<prefix, width, suffix> {
   let PredicateMethod = !strconcat("is", prefix, "Imm", suffix, "<",
                                    !cast<string>(width), ">");
@@ -23,7 +27,7 @@ def FenceArgAsmOperand : AsmOperandClass {
   let ParserMethod = "parseFenceArg";
 }
 
-def InsnDirectiveOpcodeAsmOperand : ImmAsmOperand<"U", 7> {
+def InsnDirectiveOpcodeAsmOperand : ImmAsmOperandTemplate<"U", 7> {
   let Name = "InsnDirectiveOpcode";
   let ParserMethod = "parseInsnDirectiveOpcode";
 }
@@ -40,22 +44,33 @@ def CSRSystemRegister : AsmOperandClass{
 //===----------------------------------------------------------------------===//
 class ToyOperand : Operand<i32>;
 
-class ImmOperandBase<string prefix, int width, string suffix = "">
+class ImmOperandBase<int width>
     : ToyOperand {
-  let ParserMatchClass = ImmAsmOperandBase<prefix, width, suffix>;
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<}] # width # [{>(Imm);
+  }];
 }
 
-class ImmOperand<string prefix, int width, string suffix = ""> : ToyOperand {
+class ImmOperand<string prefix, int width, string suffix = "">
+    : ImmOperandBase<width> {
   let ParserMatchClass = ImmAsmOperand<prefix, width, suffix>;
 }
 
-class SImmOperand<int width, string suffix = "">
-    : ImmOperand<"S", width, suffix> {
+class ImmOperandTemplate<string prefix, int width, string suffix = "">
+    : ImmOperandBase<width> {
+  let ParserMatchClass = ImmAsmOperandTemplate<prefix, width, suffix>;
+}
+
+class SImmOperandTemplate<int width, string suffix = "">
+    : ImmOperandTemplate<"S", width, suffix> {
   let DecoderMethod = "decodeSImmOperand<" # width # ">";
 }
-class UImmOperand<int width, string suffix = "">
-    : ImmOperand<"U", width, suffix>;
-class SImmOperandLsb0<int width> : SImmOperand<width, "Lsb0"> {
+class UImmOperandTemplate<int width, string suffix = "">
+    : ImmOperandTemplate<"U", width, suffix>;
+class SImmOperandLsb0Template<int width> : SImmOperandTemplate<width, "Lsb0"> {
   let EncoderMethod = "getImmOpValueAsrN<1>";
   let DecoderMethod = "decodeSImmOperandAndLslN<" # width # ", 1>";
 
@@ -64,29 +79,36 @@ class SImmOperandLsb0<int width> : SImmOperand<width, "Lsb0"> {
   let PrintMethod = "printBranchOperand";
 }
 
-def simm12       : SImmOperand<12>;
-def simm12_lo    : ImmOperandBase<"S", 12, "LO">;
-def simm13_lsb0  : SImmOperandLsb0<13>;
-def simm21_lsb0  : SImmOperandLsb0<21>;
+def simm12       : SImmOperandTemplate<12>;
+def simm12_lo    : ImmOperand<"S", 12, "LO"> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isInt<12>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def simm13_lsb0  : SImmOperandLsb0Template<13>;
+def simm21_lsb0  : SImmOperandLsb0Template<21>;
 
-def uimm3        : UImmOperand<3>;
-def uimm5        : UImmOperand<5>;
-def uimm7        : UImmOperand<7>;
-def uimm7_opcode : UImmOperand<7> {
+def uimm3        : UImmOperandTemplate<3>;
+def uimm5        : UImmOperandTemplate<5>;
+def uimm7        : UImmOperandTemplate<7>;
+def uimm7_opcode : UImmOperandTemplate<7> {
   let ParserMatchClass = InsnDirectiveOpcodeAsmOperand;
 }
-def uimm20       : UImmOperand<20>;
-def uimm20_auipc : ImmOperandBase<"U", 20, "AUIPC">;
-def uimm32       : UImmOperand<32>;
+def uimm20       : UImmOperandTemplate<20>;
+def uimm20_auipc : ImmOperand<"U", 20, "AUIPC">;
+def uimm32       : UImmOperandTemplate<32>;
 
-def imm32_la     : ImmOperandBase<"", 32, "LA">;
-def imm32_li     : ImmOperandBase<"", 32, "LI">;
+def imm32_la     : ImmOperand<"", 32, "LA">;
+def imm32_li     : ImmOperand<"", 32, "LI">;
 
 def fencearg     : ToyOperand {
   let ParserMatchClass = FenceArgAsmOperand;
 }
 
-def csr_sysreg   : ToyOperand{
+def csr_sysreg   : ToyOperand {
   let ParserMatchClass = CSRSystemRegister;
   let PrintMethod      = "printCSRSystemRegister";
 }

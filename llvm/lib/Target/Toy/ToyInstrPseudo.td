@@ -12,15 +12,17 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in {
                             "$rd, $imm">;
 }
 
-def : InstAlias<"lb $rd, ($rs1)",  (LB GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lh $rd, ($rs1)",  (LH GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lw $rd, ($rs1)",  (LW GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lbu $rd, ($rs1)", (LBU GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lhu $rd, ($rs1)", (LHU GPR:$rd, GPR:$rs1, 0)>;
+let EmitPriority = 0 in {
+  def : InstAlias<"lb $rd, ($rs1)",  (LB GPR:$rd, GPR:$rs1, 0)>;
+  def : InstAlias<"lh $rd, ($rs1)",  (LH GPR:$rd, GPR:$rs1, 0)>;
+  def : InstAlias<"lw $rd, ($rs1)",  (LW GPR:$rd, GPR:$rs1, 0)>;
+  def : InstAlias<"lbu $rd, ($rs1)", (LBU GPR:$rd, GPR:$rs1, 0)>;
+  def : InstAlias<"lhu $rd, ($rs1)", (LHU GPR:$rd, GPR:$rs1, 0)>;
 
-def : InstAlias<"sb $rs2, ($rs1)", (SB GPR:$rs2, GPR:$rs1, 0)>;
-def : InstAlias<"sh $rs2, ($rs1)", (SH GPR:$rs2, GPR:$rs1, 0)>;
-def : InstAlias<"sw $rs2, ($rs1)", (SW GPR:$rs2, GPR:$rs1, 0)>;
+  def : InstAlias<"sb $rs2, ($rs1)", (SB GPR:$rs2, GPR:$rs1, 0)>;
+  def : InstAlias<"sh $rs2, ($rs1)", (SH GPR:$rs2, GPR:$rs1, 0)>;
+  def : InstAlias<"sw $rs2, ($rs1)", (SW GPR:$rs2, GPR:$rs1, 0)>;
+} // EmitPriority = 0
 
 def : InstAlias<"nop",          (ADDI X0,      X0,      0)>;
 
