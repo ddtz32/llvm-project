@@ -1,0 +1,1 @@
+add_clang_library(PrintSomething SHARED PrintSomething.cpp)
