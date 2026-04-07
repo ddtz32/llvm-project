@@ -28,3 +28,4 @@ include_directories("${CLANG_INCLUDE_DIRS}")
 include_directories("include")
 
 add_subdirectory(lib)
+add_subdirectory(test)

@@ -26,7 +26,7 @@ void PrintSomethingConsumer ::HandleTranslationUnit(ASTContext &Ctx) {
   }
 
   for (const auto &E : Visitor.getDeclMap())
-    errs() << "count: " << E.second << ", file = " << E.first() << "\n";
+    errs() << "count: " << E.second << ", file: " << E.first() << "\n";
 }
 
 bool PrintSomethingAction ::ParseArgs(const CompilerInstance &CI,
