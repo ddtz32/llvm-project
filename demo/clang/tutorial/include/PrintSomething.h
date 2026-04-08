@@ -26,7 +26,7 @@ public:
 class PrintSomethingAction final : public clang::PluginASTAction {
   std::set<std::string> ParsedTemplates;
 
-private:
+public:
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &CI,
                     llvm::StringRef InFile) override {

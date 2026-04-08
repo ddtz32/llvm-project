@@ -2,7 +2,6 @@
 #include "clang/Frontend/FrontendPluginRegistry.h"
 
 using namespace clang;
-using namespace llvm;
 
 bool PrintSomething::VisitCXXRecordDecl(CXXRecordDecl *Decl) {
   auto FullLoc = Ctx.getFullLoc(Decl->getBeginLoc());
@@ -21,19 +20,19 @@ void PrintSomethingConsumer ::HandleTranslationUnit(ASTContext &Ctx) {
   Visitor.TraverseDecl(Ctx.getTranslationUnitDecl());
 
   if (Visitor.getDeclMap().empty()) {
-    errs() << "no declarations found\n";
+    llvm::errs() << "no declarations found\n";
     return;
   }
 
   for (const auto &E : Visitor.getDeclMap())
-    errs() << "count: " << E.second << ", file: " << E.first() << "\n";
+    llvm::errs() << "count: " << E.second << ", file: " << E.first() << "\n";
 }
 
 bool PrintSomethingAction ::ParseArgs(const CompilerInstance &CI,
                                       const std::vector<std::string> &Args) {
   for (int i = 0, e = Args.size(); i < e; ++i) {
     StringRef Arg = Args[i];
-    errs() << "PrintSomething arg = " << Arg << "\n";
+    llvm::errs() << "PrintSomething arg = " << Arg << "\n";
 
     auto &D = CI.getDiagnostics();
 
@@ -56,11 +55,9 @@ bool PrintSomethingAction ::ParseArgs(const CompilerInstance &CI,
     }
   }
 
-  if (find_if(Args, [](StringRef Arg) { return Arg == "help"; }) !=
-      Args.end()) {
-    PrintHelp(errs());
-    return true;
-  }
+  if (llvm::find_if(Args, [](StringRef Arg) { return Arg == "help"; }) !=
+      Args.end())
+    PrintHelp(llvm::errs());
 
   return true;
 }

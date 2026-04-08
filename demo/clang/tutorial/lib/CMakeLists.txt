@@ -1,1 +1,4 @@
-add_clang_library(PrintSomething SHARED PrintSomething.cpp)
+add_clang_library(ClangTutorial SHARED
+  PrintSomething.cpp
+  LACommenter.cpp
+)
