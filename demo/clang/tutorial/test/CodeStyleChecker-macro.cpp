@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -load %lib/libClangTutorial.so -plugin csc -verify %s 2>&1
+// RUN: %clang -cc1 -load %lib/libClangTutorial%ext -plugin csc -verify %s 2>&1
 
 #define ADD_SUFFIX(name) name##Sufiix
 

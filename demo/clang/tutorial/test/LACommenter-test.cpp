@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -load %lib/libClangTutorial.so -plugin lac %s \
+// RUN: %clang -cc1 -load %lib/libClangTutorial%ext -plugin lac %s \
 // RUN:   2>&1 | FileCheck %s
 
 // RUN: ../bin/la-commenter %s 2>&1 | FileCheck %s

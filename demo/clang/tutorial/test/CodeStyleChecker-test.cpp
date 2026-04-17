@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -load %lib/libClangTutorial.so -plugin csc -verify %s 2>&1
+// RUN: %clang -cc1 -load %lib/libClangTutorial%ext -plugin csc -verify %s 2>&1
 
 // expected-warning@+2 {{Type and variable names should start with upper-case letter}}
 // expected-warning@+1 {{'_' in names is not allowed}}

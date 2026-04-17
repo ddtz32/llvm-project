@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -load %lib/libClangTutorial.so -plugin print-something %s \
+// RUN: %clang -cc1 -load %lib/libClangTutorial%ext -plugin print-something %s \
 // RUN:   2>&1 | FileCheck %s
 
 // CHECK: count: 3, file: {{.*}}/demo/clang/tutorial/test/PrintSomething-basic.cpp

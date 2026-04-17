@@ -26,6 +26,10 @@ include_directories("${LLVM_INCLUDE_DIRS}")
 include_directories("${CLANG_INCLUDE_DIRS}")
 
 include_directories("include")
+# Allow undefined symbols in shared objects on Darwin (this is the default
+# behaviour on Linux)
+# llvm handle this in `llvm/cmake/modules/HandleLLVMOptions.cmake`
+link_libraries("$<$<PLATFORM_ID:Darwin>:-undefined dynamic_lookup>")
 
 add_subdirectory(lib)
 add_subdirectory(test)
