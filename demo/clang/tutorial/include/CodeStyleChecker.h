@@ -24,7 +24,7 @@ class CodeStyleCheckerComsumer final : public clang::ASTConsumer {
   bool MainFileOnly;
 
 public:
-  CodeStyleCheckerComsumer(bool MainFileOnly) : MainFileOnly(MainFileOnly) {}
+  explicit CodeStyleCheckerComsumer(bool MainFileOnly) : MainFileOnly(MainFileOnly) {}
 
   void HandleTranslationUnit(clang::ASTContext &Ctx) override;
 };

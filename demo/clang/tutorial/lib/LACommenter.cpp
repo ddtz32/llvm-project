@@ -56,9 +56,6 @@ void LACommenterConsumer::HandleTranslationUnit(ASTContext &Ctx) {
   LACommenterMatcher LACHandler(Rewriter);
   Finder.addMatcher(Matcher, &LACHandler);
   Finder.matchAST(Ctx);
-
-  Rewriter.getEditBuffer(Rewriter.getSourceMgr().getMainFileID())
-      .write(llvm::outs());
 }
 
 std::unique_ptr<clang::ASTConsumer>
@@ -66,6 +63,13 @@ LACommenterAction::CreateASTConsumer(clang::CompilerInstance &CI,
                                      llvm::StringRef InFile) {
   Rewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
   return std::make_unique<LACommenterConsumer>(Rewriter);
+}
+
+void LACommenterAction::EndSourceFileAction() {
+  PluginASTAction::EndSourceFileAction();
+
+  Rewriter.getEditBuffer(Rewriter.getSourceMgr().getMainFileID())
+      .write(llvm::outs());
 }
 
 static FrontendPluginRegistry::Add<LACommenterAction>

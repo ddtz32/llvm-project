@@ -5,7 +5,7 @@
 
 class PrintSomething final : public clang::RecursiveASTVisitor<PrintSomething> {
 public:
-  PrintSomething(clang::ASTContext &Ctx) : Ctx(Ctx) {}
+  explicit PrintSomething(clang::ASTContext &Ctx) : Ctx(Ctx) {}
 
   bool VisitCXXRecordDecl(clang::CXXRecordDecl *Decl);
 

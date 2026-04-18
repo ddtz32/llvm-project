@@ -4,28 +4,42 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 
-class LACommenterMatcher final
+class ObfuscatorMatcherForAdd final
     : public clang::ast_matchers::MatchFinder::MatchCallback {
   clang::Rewriter &Rewriter;
   llvm::SmallSet<clang::FullSourceLoc, 8> EditedLocations;
 
 public:
-  explicit LACommenterMatcher(clang::Rewriter &Rewriter) : Rewriter(Rewriter) {}
+  explicit ObfuscatorMatcherForAdd(clang::Rewriter &Rewriter)
+      : Rewriter(Rewriter) {}
 
   void
   run(const clang::ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-class LACommenterConsumer final : public clang::ASTConsumer {
+class ObfuscatorMatcherForSub final
+    : public clang::ast_matchers::MatchFinder::MatchCallback {
+  clang::Rewriter &Rewriter;
+  llvm::SmallSet<clang::FullSourceLoc, 8> EditedLocations;
+
+public:
+  explicit ObfuscatorMatcherForSub(clang::Rewriter &Rewriter)
+      : Rewriter(Rewriter) {}
+
+  void
+  run(const clang::ast_matchers::MatchFinder::MatchResult &Result) override;
+};
+
+class ObfuscatorConsumer final : public clang::ASTConsumer {
   clang::Rewriter &Rewriter;
 
 public:
-  explicit LACommenterConsumer(clang::Rewriter &Rewriter) : Rewriter(Rewriter) {}
+  explicit ObfuscatorConsumer(clang::Rewriter &Rewriter) : Rewriter(Rewriter) {}
 
   void HandleTranslationUnit(clang::ASTContext &Ctx) override;
 };
 
-class LACommenterAction final : public clang::PluginASTAction {
+class ObfuscatorAction final : public clang::PluginASTAction {
   clang::Rewriter Rewriter;
 
 public:
