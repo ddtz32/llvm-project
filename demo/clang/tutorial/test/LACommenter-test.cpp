@@ -17,6 +17,10 @@ void func(float FloatArg);
 void func(int IntArg);
 void func(const char *StringArg);
 
+struct A {
+  void operator()(int Arg);
+};
+
 void test(int Arg) {
   func(true);
   func('a');
@@ -24,4 +28,7 @@ void test(int Arg) {
   func(1);
   func("hello");
   func(Arg);
+
+  A a;
+  a(1);
 }

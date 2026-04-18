@@ -18,8 +18,13 @@ void LACommenterMatcher::run(
   if (CalleeDecl->param_empty())
     return;
 
+  auto ArgBegin = Caller->arg_begin(), ArgEnd = Caller->arg_end();
+  if (llvm::isa<CXXOperatorCallExpr>(Caller))
+    ArgBegin++;
+
   for (const auto [Arg, ParamDecl] :
-       llvm::zip_first(Caller->arguments(), CalleeDecl->parameters())) {
+       llvm::zip_first(CallExpr::const_arg_range(ArgBegin, ArgEnd),
+                       CalleeDecl->parameters())) {
     const Expr *E = Arg->IgnoreParenCasts();
     if (!dyn_cast<CXXBoolLiteralExpr>(E) && !dyn_cast<CharacterLiteral>(E) &&
         !dyn_cast<StringLiteral>(E) && !dyn_cast<IntegerLiteral>(E) &&

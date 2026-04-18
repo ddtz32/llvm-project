@@ -4,12 +4,12 @@
 using namespace clang;
 
 void CodeStyleCheckerVisitor::checkNoUnderscoreInName(NamedDecl *Decl) {
-  llvm::StringRef Name = Decl->getName();
+  std::string Name = Decl->getNameAsString();
   auto UnderScorePos = Name.find('_');
   if (UnderScorePos == std::string::npos)
     return;
 
-  std::string Hint = Name.str();
+  std::string Hint = Name;
   auto EndPos = std::remove(Hint.begin(), Hint.end(), '_');
   Hint.erase(EndPos, Hint.end());
   FixItHint FixItHint =
@@ -22,12 +22,12 @@ void CodeStyleCheckerVisitor::checkNoUnderscoreInName(NamedDecl *Decl) {
 }
 
 void CodeStyleCheckerVisitor::checkNameStartsWithLowerCase(NamedDecl *Decl) {
-  llvm::StringRef Name = Decl->getName();
+  std::string Name = Decl->getNameAsString();
   char FirstChar = Name.front();
   if (isLowercase(FirstChar))
     return;
 
-  std::string Hint = Name.str();
+  std::string Hint = Name;
   Hint.front() = isLowercase(FirstChar);
   FixItHint FixItHint =
       FixItHint::CreateReplacement(Decl->getSourceRange(), Hint);
@@ -40,12 +40,12 @@ void CodeStyleCheckerVisitor::checkNameStartsWithLowerCase(NamedDecl *Decl) {
 }
 
 void CodeStyleCheckerVisitor::checkNameStartsWithUpperCase(NamedDecl *Decl) {
-  llvm::StringRef Name = Decl->getName();
+  std::string Name = Decl->getNameAsString();
   char FirstChar = Name.front();
   if (isUppercase(FirstChar))
     return;
 
-  std::string Hint = Name.str();
+  std::string Hint = Name;
   Hint.front() = toUppercase(FirstChar);
   FixItHint FixItHint =
       FixItHint::CreateReplacement(Decl->getSourceRange(), Hint);
@@ -58,7 +58,7 @@ void CodeStyleCheckerVisitor::checkNameStartsWithUpperCase(NamedDecl *Decl) {
 }
 
 bool CodeStyleCheckerVisitor::VisitCXXRecordDecl(CXXRecordDecl *Decl) {
-  if (Decl->getName().empty())
+  if (Decl->getNameAsString().empty())
     return true;
 
   checkNameStartsWithUpperCase(Decl);
@@ -67,7 +67,7 @@ bool CodeStyleCheckerVisitor::VisitCXXRecordDecl(CXXRecordDecl *Decl) {
 }
 
 bool CodeStyleCheckerVisitor::VisitFunctionDecl(FunctionDecl *Decl) {
-  if (Decl->isOverloadedOperator())
+  if (llvm::isa<CXXConversionDecl>(Decl))
     return true;
 
   checkNameStartsWithLowerCase(Decl);
@@ -76,7 +76,7 @@ bool CodeStyleCheckerVisitor::VisitFunctionDecl(FunctionDecl *Decl) {
 }
 
 bool CodeStyleCheckerVisitor::VisitVarDecl(VarDecl *Decl) {
-  if (llvm::isa<ParmVarDecl>(Decl) && Decl->getName().empty())
+  if (llvm::isa<ParmVarDecl>(Decl) && Decl->getNameAsString().empty())
     return true;
 
   checkNameStartsWithUpperCase(Decl);
@@ -85,7 +85,7 @@ bool CodeStyleCheckerVisitor::VisitVarDecl(VarDecl *Decl) {
 }
 
 bool CodeStyleCheckerVisitor::VisitFieldDecl(FieldDecl *Decl) {
-  if (Decl->getName().empty())
+  if (Decl->getNameAsString().empty())
     return true;
 
   checkNameStartsWithUpperCase(Decl);

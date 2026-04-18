@@ -8,11 +8,9 @@ configure_file(
   @ONLY
 )
 
-add_clang_executable(la-commenter
-  LACommenterMain.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/LACommenter.cpp
-)
-target_link_libraries(la-commenter PRIVATE
+macro(add_clang_tutorial_tools target)
+  add_clang_executable(${target} ${${target}-sources} PARTIAL_SOURCES_INTENDED)
+  target_link_libraries(${target} PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
@@ -23,3 +21,16 @@ target_link_libraries(la-commenter PRIVATE
   LLVMFrontendOpenMP
   LLVMSupport
 )
+endmacro()
+
+set(la-commenter-sources
+  LACommenterMain.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/LACommenter.cpp
+)
+add_clang_tutorial_tools(la-commenter)
+
+set(code-style-checker-sources
+  CodeStyleCheckerMain.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/CodeStyleChecker.cpp
+)
+add_clang_tutorial_tools(code-style-checker)
