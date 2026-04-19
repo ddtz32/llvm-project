@@ -3,4 +3,5 @@ add_clang_library(ClangTutorial SHARED
   LACommenter.cpp
   CodeStyleChecker.cpp
   Obfuscator.cpp
+  UnusedForLoopVar.cpp
 )
