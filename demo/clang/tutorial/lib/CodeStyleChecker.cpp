@@ -109,13 +109,15 @@ void CodeStyleCheckerComsumer::HandleTranslationUnit(clang::ASTContext &Ctx) {
 bool CodeStyleCheckerAction::ParseArgs(const CompilerInstance &CI,
                                        const std::vector<std::string> &Args) {
   for (llvm::StringRef Arg : Args) {
-    if (Arg == "-help")
-      PrintHelp(llvm::errs());
-    else if (Arg.consume_front("-main-file-only="))
+    if (Arg.consume_front("-main-file-only="))
       MainFileOnly = Arg == "true";
     else
       return false;
   }
+
+  if (llvm::find_if(Args, [](StringRef Arg) { return Arg == "help"; }) !=
+      Args.end())
+    PrintHelp(llvm::errs());
   return true;
 }
 

@@ -4,4 +4,5 @@ add_clang_library(ClangTutorial SHARED
   CodeStyleChecker.cpp
   Obfuscator.cpp
   UnusedForLoopVar.cpp
+  CodeRefactor.cpp
 )

@@ -24,13 +24,18 @@ class CodeStyleCheckerComsumer final : public clang::ASTConsumer {
   bool MainFileOnly;
 
 public:
-  explicit CodeStyleCheckerComsumer(bool MainFileOnly) : MainFileOnly(MainFileOnly) {}
+  explicit CodeStyleCheckerComsumer(bool MainFileOnly)
+      : MainFileOnly(MainFileOnly) {}
 
   void HandleTranslationUnit(clang::ASTContext &Ctx) override;
 };
 
 class CodeStyleCheckerAction final : public clang::PluginASTAction {
   bool MainFileOnly = true;
+
+  void PrintHelp(llvm::raw_ostream &OS) const {
+    OS << "Help for CodeStyleChecker plguin\n";
+  }
 
 public:
   std::unique_ptr<clang::ASTConsumer>
@@ -41,8 +46,4 @@ public:
 
   bool ParseArgs(const clang::CompilerInstance &CI,
                  const std::vector<std::string> &Args) override;
-
-  void PrintHelp(llvm::raw_ostream &OS) const {
-    OS << "Help for CodeStyleChecker plguin\n";
-  }
 };

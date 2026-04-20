@@ -34,3 +34,9 @@ set(code-style-checker-sources
   ${CMAKE_CURRENT_SOURCE_DIR}/../lib/CodeStyleChecker.cpp
 )
 add_clang_tutorial_tools(code-style-checker)
+
+set(code-refactor-sources
+  CodeRefactorMain.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../lib/CodeRefactor.cpp
+)
+add_clang_tutorial_tools(code-refactor)

@@ -4,7 +4,6 @@
 
 using namespace clang;
 using namespace tooling;
-;
 
 static llvm::cl::OptionCategory CSCCategory("code-style-checker options");
 

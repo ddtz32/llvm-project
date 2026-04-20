@@ -26,6 +26,10 @@ public:
 class PrintSomethingAction final : public clang::PluginASTAction {
   std::set<std::string> ParsedTemplates;
 
+  void PrintHelp(llvm::raw_ostream &OS) const {
+    OS << "Help for PrintSomething plguin\n";
+  }
+
 public:
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &CI,
@@ -35,8 +39,4 @@ public:
 
   bool ParseArgs(const clang::CompilerInstance &CI,
                  const std::vector<std::string> &Args) override;
-
-  void PrintHelp(llvm::raw_ostream &OS) const {
-    OS << "Help for PrintSomething plguin\n";
-  }
 };
