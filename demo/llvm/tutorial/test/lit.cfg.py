@@ -6,6 +6,7 @@ config.test_format = lit.formats.ShTest(execute_external=False)
 config.test_source_root = os.path.dirname(__file__)
 config.test_exec_root = os.path.join(config.custom_build_dir, "test")
 config.suffixes = [".ll"]
+config.excludes = ["Inputs"]
 
 # llvm settings, use FileCheck in lit RUN command
 llvm_config.use_default_substitutions()
