@@ -12,7 +12,7 @@ define void @fez() {
   ret void
 }
 
-define i32 @main() {
+define i32 @main(i32 %argc, ptr %argv) {
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   store i32 0, ptr %1, align 4

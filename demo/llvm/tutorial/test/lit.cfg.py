@@ -10,7 +10,7 @@ config.excludes = ["Inputs"]
 
 # llvm settings, use FileCheck in lit RUN command
 llvm_config.use_default_substitutions()
-llvm_config.add_tool_substitutions(["opt"])
+llvm_config.add_tool_substitutions(["opt", "lli"])
 
 # 映射 %lib
 config.substitutions.append(("%lib", config.custom_lib_dir))

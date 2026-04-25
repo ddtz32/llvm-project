@@ -1,6 +1,6 @@
 ; RUN: opt -load-pass-plugin %lib/libOpcodeCounter%ext \
-; RUN:   -passes="print<opcode-counter>" -disable-output \
-; RUN:   %S/Inputs/CallCounterInput.ll 2>&1 | FileCheck %s
+; RUN:   -passes="print<opcode-counter>" -disable-output %S/Inputs/Call.ll \
+; RUN:   2>&1 | FileCheck %s
 
 ; CHECK-LABEL: foo
 ; CHECK:       ret 1

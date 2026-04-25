@@ -4,3 +4,4 @@ endmacro()
 
 add_llvm_tutorial_library(PrintSomething)
 add_llvm_tutorial_library(OpcodeCounter)
+add_llvm_tutorial_library(InjectFuncCall)
