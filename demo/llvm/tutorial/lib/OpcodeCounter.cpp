@@ -15,8 +15,8 @@ using OpcodeCounterResult = StringMap<unsigned>;
 OpcodeCounterResult opcodeCounterImpl(Function &F) {
   OpcodeCounterResult OpcodeMap;
 
-  for (auto I = inst_begin(F), E = inst_end(F); I != E; I++)
-    OpcodeMap[I->getOpcodeName()]++;
+  for (Instruction &I : instructions(F))
+    OpcodeMap[I.getOpcodeName()]++;
 
   return OpcodeMap;
 }
