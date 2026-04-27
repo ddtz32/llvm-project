@@ -13,3 +13,5 @@ add_llvm_tutorial_library(InjectFuncCall)
 
 add_llvm_tutorial_library(StaticCallCounter)
 target_include_directories(StaticCallCounter PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../include")
+
+add_llvm_tutorial_library(DynamicCallCounter)

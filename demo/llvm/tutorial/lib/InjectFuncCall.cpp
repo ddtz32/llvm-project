@@ -22,8 +22,6 @@ bool injectFuncCallImpl(Module &M) {
   FunctionType *PrintfTy = FunctionType::get(IntegerType::getInt32Ty(Ctx),
                                              PointerType::getUnqual(Ctx), true);
   FunctionCallee Printf = M.getOrInsertFunction("printf", PrintfTy);
-  assert(isa<Function>(Printf.getCallee()));
-  Function *PrintfF = cast<Function>(Printf.getCallee());
 
   Constant *FormatStr = ConstantDataArray::getString(
       Ctx, "Hello from %s, number of arguments: %d\n");
