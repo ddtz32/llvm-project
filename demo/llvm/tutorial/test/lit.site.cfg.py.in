@@ -1,5 +1,7 @@
 # llvm configurations
 config.llvm_tools_dir = "@LLVM_TOOLS_BINARY_DIR@"
+config.host_triple = "@LLVM_HOST_TRIPLE@"
+config.target_triple = "@LLVM_TARGET_TRIPLE@"
 
 # clang tutorial configurations
 config.custom_build_dir = "@CMAKE_BINARY_DIR@"

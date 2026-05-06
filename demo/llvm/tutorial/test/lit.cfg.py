@@ -10,6 +10,8 @@ config.excludes = ["Inputs"]
 
 # llvm settings, use FileCheck in lit RUN command
 llvm_config.use_default_substitutions()
+# 使用 `use_clang` 方法, 并且需要设置 config.host_triple 以及 config.target_triple
+llvm_config.use_clang()
 llvm_config.add_tool_substitutions(["opt", "lli"])
 
 # 映射 %lib
