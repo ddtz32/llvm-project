@@ -17,3 +17,4 @@ target_include_directories(StaticCallCounter PRIVATE "${CMAKE_CURRENT_SOURCE_DIR
 add_llvm_tutorial_library(DynamicCallCounter)
 add_llvm_tutorial_library(MBASub)
 add_llvm_tutorial_library(MBAAdd)
+add_llvm_tutorial_library(RIV)
