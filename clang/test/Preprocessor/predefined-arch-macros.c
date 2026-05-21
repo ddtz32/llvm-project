@@ -4525,6 +4525,12 @@
 // CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
 // CHECK_M68K_68020_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
 
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     --target=h2blb \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_H2BLB
+
+// CHECK_H2BLB: #define __H2BLB__ 1
+
 // Begin Hexagon tests ----------------
 
 // RUN: %clang -E -dM %s -o - 2>&1 \

@@ -199,6 +199,10 @@
 // RUN: FileCheck %s -check-prefix=ARC
 // ARC: target datalayout = "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-f32:32:32-i64:32-f64:32-a:0:32-n32"
 
+// RUN: %clang_cc1 -triple h2blb-unknown -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=H2BLB
+// H2BLB: target datalayout = "e-p:16:16-n16:32-i1:8:8-i16:16:16-i32:32:32-f32:32-v32:32:32"
+
 // RUN: %clang_cc1 -triple hexagon-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=HEXAGON
 // HEXAGON: target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
