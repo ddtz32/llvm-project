@@ -8,16 +8,15 @@ using namespace clang::targets;
 static constexpr int NumH2BLBBuiltins =
     H2BLB::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr llvm::StringTable BuiltinH2BLBStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsH2BLB.def"
-    ;
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsH2BLB.inc"
+#undef GET_BUILTIN_STR_TABLE
 
-static constexpr auto BuiltinH2BLBInfos = Builtin::MakeInfos<NumH2BLBBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsH2BLB.def"
-});
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsH2BLB.inc"
+#undef GET_BUILTIN_INFOS
+};
 
 H2BLBTargetInfo::H2BLBTargetInfo(const llvm::Triple &T) : TargetInfo(T) {
   PointerWidth = PointerAlign = 16;
@@ -35,7 +34,7 @@ void H2BLBTargetInfo::getTargetDefines(const LangOptions &Opts,
 
 llvm::SmallVector<Builtin::InfosShard>
 H2BLBTargetInfo::getTargetBuiltins() const {
-  return {{&BuiltinH2BLBStrings, BuiltinH2BLBInfos}};
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 TargetInfo::BuiltinVaListKind H2BLBTargetInfo::getBuiltinVaListKind() const {
