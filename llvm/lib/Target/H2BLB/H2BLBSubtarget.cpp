@@ -8,7 +8,7 @@ H2BLBSubtarget::H2BLBSubtarget(const Triple &TT, StringRef CPU,
     : TargetSubtargetInfo(TT, CPU, TuneCPU, FS, /*PN=*/{}, /*PF=*/{}, /*PD=*/{},
                           /*WPR=*/nullptr, /*WL=*/nullptr, /*RA=*/nullptr,
                           /*IS=*/nullptr, /*OC=*/nullptr, /*FP=*/nullptr),
-      TLInfo(TM, *this) {}
+      TLI(TM, *this) {}
 
 const TargetRegisterInfo *H2BLBSubtarget::getRegisterInfo() const {
   return nullptr;

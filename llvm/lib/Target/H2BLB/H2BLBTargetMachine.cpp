@@ -1,4 +1,5 @@
 #include "H2BLBTargetMachine.h"
+#include "H2BLBTargetTransformInfo.h"
 #include "TargetInfo/H2BLBTargetInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -22,7 +23,7 @@ H2BLBTargetMachine::H2BLBTargetMachine(const Target &T, const Triple &TT,
 
 H2BLBTargetMachine::~H2BLBTargetMachine() = default;
 
-const TargetSubtargetInfo *
+const H2BLBSubtarget *
 H2BLBTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute TuneAttr = F.getFnAttribute("tune-cpu");
@@ -43,4 +44,9 @@ H2BLBTargetMachine::getSubtargetImpl(const Function &F) const {
         std::make_unique<H2BLBSubtarget>(TargetTriple, CPU, TuneCPU, FS, *this);
   }
   return Subtarget.get();
+}
+
+TargetTransformInfo
+H2BLBTargetMachine::getTargetTransformInfo(const Function &F) const {
+  return TargetTransformInfo(std::make_unique<H2BLBTTIImpl>(this, F));
 }
