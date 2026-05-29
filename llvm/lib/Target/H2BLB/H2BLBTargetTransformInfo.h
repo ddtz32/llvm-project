@@ -25,6 +25,10 @@ public:
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                unsigned ChainSizeInBytes,
                                VectorType *VecTy) const override;
+
+  InstructionCost getIntrinsicInstrCost(
+      const IntrinsicCostAttributes &ICA,
+      TargetTransformInfo::TargetCostKind CostKind) const override;
 };
 
 } // namespace llvm
